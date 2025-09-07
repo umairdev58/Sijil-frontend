@@ -1,0 +1,1 @@
+declare module '@mui/material/Unstable_Grid2'; 
