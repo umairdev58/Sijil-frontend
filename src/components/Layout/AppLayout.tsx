@@ -37,7 +37,7 @@ import {
   ChevronRight,
 } from '@mui/icons-material';
 import ThemeToggle from '../ThemeToggle';
-import { LayoutDashboard, Users, Building2, User as UserIcon, Receipt as ReceiptIcon, Boxes, BarChart3, Plus, ShoppingCart as CartIcon, ShoppingBag, BookOpen, Truck, Ship } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, User as UserIcon, Receipt as ReceiptIcon, Boxes, BarChart3, Plus, ShoppingCart as CartIcon, ShoppingBag, BookOpen, Truck, Ship, FileText } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -59,6 +59,7 @@ const menuItems = [
   { text: 'Suppliers', icon: <Building2 size={20} />, path: '/suppliers' },
   { text: 'Users', icon: <UserIcon size={20} />, path: '/users' },
   { text: 'Daily Ledger', icon: <BookOpen size={20} />, path: '/daily-ledger' },
+  { text: 'Statement', icon: <FileText size={20} />, path: '/statement' },
 ];
 
 const salesItems = [

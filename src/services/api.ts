@@ -121,6 +121,11 @@ class ApiService {
     return response.data;
   }
 
+  async verifyAdminPassword(password: string): Promise<ApiResponse<null>> {
+    const response: AxiosResponse = await this.api.post('/auth/verify-admin-password', { password });
+    return response.data;
+  }
+
   async updateProfile(profileData: Partial<User>): Promise<ApiResponse<User>> {
     const response: AxiosResponse = await this.api.put('/auth/profile', profileData);
     return response.data;
@@ -430,8 +435,8 @@ class ApiService {
     return response.data;
   }
 
-  async deleteSale(id: string): Promise<ApiResponse<null>> {
-    const response: AxiosResponse = await this.api.delete(`/sales/${id}`);
+  async deleteSale(id: string, password: string): Promise<ApiResponse<null>> {
+    const response: AxiosResponse = await this.api.delete(`/sales/${id}`, { data: { password } });
     return response.data;
   }
 
@@ -1386,6 +1391,44 @@ class ApiService {
     };
     
     xhr.send();
+  }
+
+  // Container Statement endpoints
+  async getContainerStatement(containerNo: string): Promise<ApiResponse<any>> {
+    const response: AxiosResponse = await this.api.get(`/container-statements/${containerNo}`);
+    return response.data;
+  }
+
+  async createContainerStatement(data: any): Promise<ApiResponse<any>> {
+    const response: AxiosResponse = await this.api.post('/container-statements', data);
+    return response.data;
+  }
+
+  async updateContainerStatement(id: string, data: any): Promise<ApiResponse<any>> {
+    const response: AxiosResponse = await this.api.put(`/container-statements/${id}`, data);
+    return response.data;
+  }
+
+  async addContainerStatementExpense(id: string, expenseData: { description: string; amount: number }): Promise<ApiResponse<any>> {
+    const response: AxiosResponse = await this.api.post(`/container-statements/${id}/expenses`, expenseData);
+    return response.data;
+  }
+
+  async removeContainerStatementExpense(id: string, expenseId: string): Promise<ApiResponse<any>> {
+    const response: AxiosResponse = await this.api.delete(`/container-statements/${id}/expenses/${expenseId}`);
+    return response.data;
+  }
+
+  async getAllContainerStatements(page = 1, limit = 10, search = ''): Promise<{ success: boolean; data: any[]; pagination: any }> {
+    const response: AxiosResponse = await this.api.get('/container-statements', {
+      params: { page, limit, search }
+    });
+    return response.data;
+  }
+
+  async deleteContainerStatement(id: string): Promise<ApiResponse<null>> {
+    const response: AxiosResponse = await this.api.delete(`/container-statements/${id}`);
+    return response.data;
   }
 }
 

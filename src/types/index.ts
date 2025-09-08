@@ -350,4 +350,33 @@ export interface DubaiClearancePayment {
   paymentDate: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ContainerStatementProduct {
+  srNo: number;
+  product: string;
+  quantity: number;
+  unitPrice: number;
+  amountWithoutVAT: number;
+}
+
+export interface ContainerStatementExpense {
+  _id?: string;
+  description: string;
+  amount: number;
+}
+
+export interface ContainerStatement {
+  _id: string;
+  containerNo: string;
+  products: ContainerStatementProduct[];
+  expenses: ContainerStatementExpense[];
+  grossSale: number;
+  totalExpenses: number;
+  netSale: number;
+  totalQuantity: number;
+  createdBy: string | User;
+  updatedBy?: string | User;
+  createdAt: string;
+  updatedAt: string;
 } 

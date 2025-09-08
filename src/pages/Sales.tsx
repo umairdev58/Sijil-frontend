@@ -30,6 +30,10 @@ import {
   Collapse,
   InputAdornment,
   TablePagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -43,8 +47,12 @@ import {
   Payment as PaymentIcon,
   Print as PrintIcon,
   Clear as ClearIcon,
+  Warning as WarningIcon,
+  Security as SecurityIcon,
+  Receipt as ReceiptIcon,
 } from '@mui/icons-material';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Snackbar } from '@mui/material';
 import apiService from '../services/api';
 import { useNavigate } from 'react-router-dom';
@@ -75,8 +83,13 @@ const SalesPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [saleToDelete, setSaleToDelete] = useState<Sales | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
   const { mode } = useAppTheme();
+  const { user } = useAuth();
   const [searchInput, setSearchInput] = useState('');
 
   // Filter states with default current month filter
@@ -252,20 +265,43 @@ const SalesPage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this sale?')) {
-      try {
-        const response = await apiService.deleteSale(id);
-        if (response.success) {
-          setSales(prev => prev.filter(sale => sale._id !== id));
-      } else {
-          setError('Failed to delete sale');
-        }
-    } catch (err) {
-        console.error('Error deleting sale:', err);
-        setError('Failed to delete sale');
-      }
+  const handleDeleteClick = (sale: Sales) => {
+    setSaleToDelete(sale);
+    setDeleteDialogOpen(true);
+    setDeletePassword('');
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!saleToDelete || !deletePassword.trim()) {
+      setError('Please enter your admin password');
+      return;
     }
+
+    setDeleteLoading(true);
+    try {
+      const response = await apiService.deleteSale(saleToDelete._id, deletePassword);
+      if (response.success) {
+        setSales(prev => prev.filter(sale => sale._id !== saleToDelete._id));
+        setDeleteDialogOpen(false);
+        setSaleToDelete(null);
+        setDeletePassword('');
+        setError(null);
+      } else {
+        setError(response.message || 'Failed to delete sale');
+      }
+    } catch (err: any) {
+      console.error('Error deleting sale:', err);
+      setError(err.response?.data?.message || 'Failed to delete sale');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setSaleToDelete(null);
+    setDeletePassword('');
+    setError(null);
   };
 
   const handleEdit = (sale: Sales) => {
@@ -775,11 +811,13 @@ const SalesPage: React.FC = () => {
                             <EditIcon />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton size="small" onClick={() => handleDelete(sale._id)}>
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
+                        {user?.role === 'admin' && (
+                          <Tooltip title="Delete">
+                            <IconButton size="small" onClick={() => handleDeleteClick(sale)}>
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                       </Stack>
                         </TableCell>
                       </TableRow>
@@ -862,6 +900,270 @@ const SalesPage: React.FC = () => {
           New sale has been created successfully!
         </Alert>
       </Snackbar>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: mode === 'dark' ? '#1e293b' : '#ffffff',
+            color: mode === 'dark' ? '#f1f5f9' : '#1e293b',
+            borderRadius: 3,
+            boxShadow: mode === 'dark' 
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.8)' 
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          pb: 1,
+          borderBottom: mode === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{
+              p: 1.5,
+              borderRadius: '50%',
+              bgcolor: mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <WarningIcon sx={{ 
+                color: '#ef4444', 
+                fontSize: 28 
+              }} />
+            </Box>
+            <Box>
+              <Typography variant="h5" sx={{ 
+                fontWeight: 700,
+                color: mode === 'dark' ? '#f1f5f9' : '#1e293b',
+                mb: 0.5
+              }}>
+                Delete Sale Record
+              </Typography>
+              <Typography variant="body2" sx={{ 
+                color: mode === 'dark' ? '#94a3b8' : '#64748b',
+                fontWeight: 500
+              }}>
+                This action cannot be undone
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
+          <Typography variant="body1" sx={{ 
+            mb: 3, 
+            color: mode === 'dark' ? '#cbd5e1' : '#475569',
+            lineHeight: 1.6
+          }}>
+            Are you sure you want to permanently delete this sale record? This will also remove all associated payment history.
+          </Typography>
+          
+          {saleToDelete && (
+            <Card sx={{ 
+              mb: 3, 
+              bgcolor: mode === 'dark' ? '#334155' : '#f8fafc',
+              border: mode === 'dark' ? '1px solid #475569' : '1px solid #e2e8f0',
+              borderRadius: 2,
+              overflow: 'hidden'
+            }}>
+              <CardHeader
+                avatar={
+                  <Avatar sx={{ 
+                    bgcolor: mode === 'dark' ? '#3b82f6' : '#2563eb',
+                    width: 40,
+                    height: 40
+                  }}>
+                    <ReceiptIcon />
+                  </Avatar>
+                }
+                title={
+                  <Typography variant="h6" sx={{ 
+                    fontWeight: 600,
+                    color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                  }}>
+                    Sale Details
+                  </Typography>
+                }
+                sx={{ pb: 1 }}
+              />
+              <CardContent sx={{ pt: 0 }}>
+                <Box sx={{ display: 'grid', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ 
+                      color: mode === 'dark' ? '#94a3b8' : '#64748b',
+                      fontWeight: 500
+                    }}>
+                      Invoice Number:
+                    </Typography>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 600,
+                      color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                    }}>
+                      {saleToDelete.invoiceNumber}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ 
+                      color: mode === 'dark' ? '#94a3b8' : '#64748b',
+                      fontWeight: 500
+                    }}>
+                      Customer:
+                    </Typography>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 600,
+                      color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                    }}>
+                      {saleToDelete.customer}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ 
+                      color: mode === 'dark' ? '#94a3b8' : '#64748b',
+                      fontWeight: 500
+                    }}>
+                      Amount:
+                    </Typography>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 700,
+                      color: mode === 'dark' ? '#10b981' : '#059669',
+                      fontSize: '1.1rem'
+                    }}>
+                      AED {saleToDelete.amount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+          
+          <Box sx={{ 
+            p: 2.5, 
+            bgcolor: mode === 'dark' ? 'rgba(59, 130, 246, 0.05)' : 'rgba(59, 130, 246, 0.05)',
+            borderRadius: 2,
+            border: mode === 'dark' ? '1px solid rgba(59, 130, 246, 0.2)' : '1px solid rgba(59, 130, 246, 0.2)'
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <SecurityIcon sx={{ 
+                color: mode === 'dark' ? '#3b82f6' : '#2563eb',
+                fontSize: 20
+              }} />
+              <Typography variant="subtitle2" sx={{ 
+                fontWeight: 600,
+                color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+              }}>
+                Admin Password Verification Required
+              </Typography>
+            </Box>
+            <TextField
+              fullWidth
+              type="password"
+              placeholder="Enter your admin password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              variant="outlined"
+              size="medium"
+              error={!!error}
+              helperText={error}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: mode === 'dark' ? '#1e293b' : '#ffffff',
+                  borderRadius: 2,
+                  '& fieldset': {
+                    borderColor: mode === 'dark' ? '#475569' : '#d1d5db',
+                    borderWidth: 2,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: mode === 'dark' ? '#64748b' : '#9ca3af',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: mode === 'dark' ? '#3b82f6' : '#2563eb',
+                    borderWidth: 2,
+                  },
+                  '&.Mui-error fieldset': {
+                    borderColor: '#ef4444',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: mode === 'dark' ? '#94a3b8' : '#6b7280',
+                  fontWeight: 500,
+                },
+                '& .MuiInputBase-input': {
+                  color: mode === 'dark' ? '#f1f5f9' : '#1e293b',
+                  fontWeight: 500,
+                  py: 1.5,
+                },
+                '& .MuiFormHelperText-root': {
+                  color: mode === 'dark' ? '#f87171' : '#dc2626',
+                  fontWeight: 500,
+                },
+              }}
+            />
+          </Box>
+        </DialogContent>
+        
+        <DialogActions sx={{ 
+          p: 3, 
+          pt: 2,
+          gap: 2,
+          borderTop: mode === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0'
+        }}>
+          <Button 
+            onClick={handleDeleteCancel} 
+            disabled={deleteLoading}
+            variant="outlined"
+            size="large"
+            sx={{
+              minWidth: 120,
+              py: 1.5,
+              borderColor: mode === 'dark' ? '#475569' : '#d1d5db',
+              color: mode === 'dark' ? '#cbd5e1' : '#6b7280',
+              fontWeight: 600,
+              borderRadius: 2,
+              '&:hover': {
+                bgcolor: mode === 'dark' ? '#334155' : '#f8fafc',
+                borderColor: mode === 'dark' ? '#64748b' : '#9ca3af',
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={deleteLoading || !deletePassword.trim()}
+            startIcon={deleteLoading ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
+            size="large"
+            sx={{
+              minWidth: 140,
+              py: 1.5,
+              bgcolor: '#dc2626',
+              fontWeight: 600,
+              borderRadius: 2,
+              boxShadow: '0 4px 14px 0 rgba(220, 38, 38, 0.3)',
+              '&:hover': {
+                bgcolor: '#b91c1c',
+                boxShadow: '0 6px 20px 0 rgba(220, 38, 38, 0.4)',
+                transform: 'translateY(-1px)',
+              },
+              '&:disabled': {
+                bgcolor: mode === 'dark' ? '#374151' : '#d1d5db',
+                color: mode === 'dark' ? '#6b7280' : '#9ca3af',
+                boxShadow: 'none',
+                transform: 'none',
+              },
+              transition: 'all 0.2s ease-in-out',
+            }}
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete Sale'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

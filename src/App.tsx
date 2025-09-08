@@ -37,6 +37,7 @@ import DubaiTransportDetails from './pages/DubaiTransportDetails';
 import DubaiClearanceInvoices from './pages/DubaiClearanceInvoices';
 import DubaiClearanceInvoiceForm from './pages/DubaiClearanceInvoiceForm';
 import DubaiClearanceDetails from './pages/DubaiClearanceDetails';
+import Statement from './pages/Statement';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -412,6 +413,17 @@ const AppContent: React.FC = () => {
             <PrivateRoute>
               <AppLayout>
                 <DubaiClearanceInvoiceForm />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
+        {/* Statement Route */}
+        <Route
+          path="/statement"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <Statement />
               </AppLayout>
             </PrivateRoute>
           }
