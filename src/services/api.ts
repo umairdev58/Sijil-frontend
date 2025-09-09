@@ -583,6 +583,11 @@ class ApiService {
     return response.data;
   }
 
+  async deletePayment(saleId: string, paymentId: string, password: string): Promise<{ success: boolean; payments?: Payment[]; paymentSummary?: any; sale?: any; message?: string }> {
+    const response: AxiosResponse = await this.api.delete(`/sales/${saleId}/payments/${paymentId}`, { data: { password } });
+    return response.data;
+  }
+
   // Customer Outstanding endpoints
   async getCustomerOutstanding(filters: {
     search?: string;
@@ -593,6 +598,8 @@ class ApiService {
     limit?: number;
     sortBy?: string;
     sortOrder?: string;
+    groupBy?: 'customer' | 'product';
+    product?: string;
   } = {}): Promise<{ 
     success: boolean; 
     data: any[]; 
@@ -612,11 +619,29 @@ class ApiService {
     return response.data;
   }
 
+  async getUniqueProducts(): Promise<{ 
+    success: boolean; 
+    data: string[];
+  }> {
+    const response: AxiosResponse = await this.api.get('/sales/products');
+    return response.data;
+  }
+
+  async getAutocompleteSuggestions(field: string): Promise<{ 
+    success: boolean; 
+    suggestions: string[];
+  }> {
+    const response: AxiosResponse = await this.api.get(`/sales/autocomplete/${field}`);
+    return response.data;
+  }
+
   async downloadCustomerOutstandingPDF(filters: {
     search?: string;
     minAmount?: number;
     maxAmount?: number;
     status?: string;
+    product?: string;
+    groupBy?: 'customer' | 'product';
   } = {}): Promise<void> {
     const params = new URLSearchParams();
     
@@ -627,30 +652,19 @@ class ApiService {
       }
     });
 
-    const url = `${this.api.defaults.baseURL}/sales/customer-outstanding/pdf?${params.toString()}`;
-    const token = localStorage.getItem('token');
+    const response = await this.api.get(`/sales/customer-outstanding/pdf?${params.toString()}`, {
+      responseType: 'blob'
+    });
     
-    // Add authorization header
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', url);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    xhr.responseType = 'blob';
-    
-    xhr.onload = () => {
-      if (xhr.status === 200) {
-        const blob = new Blob([xhr.response], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `customer-outstanding-${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
-    };
-    
-    xhr.send();
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `customer-outstanding-${new Date().toISOString().split('T')[0]}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   }
 
   // Daily Ledger endpoints

@@ -193,6 +193,7 @@ const Statement: React.FC = () => {
                   variant="outlined"
                   onClick={handlePrint}
                   startIcon={<PrintIcon />}
+                  sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
                 >
                   Print
                 </Button>
@@ -200,6 +201,7 @@ const Statement: React.FC = () => {
                   variant="outlined"
                   onClick={handleDownload}
                   startIcon={<DownloadIcon />}
+                  sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
                 >
                   Download PDF
                 </Button>

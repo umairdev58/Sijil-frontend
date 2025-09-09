@@ -24,7 +24,11 @@ import {
   FormControl,
   InputLabel,
   Select,
-  Alert
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -40,13 +44,17 @@ import {
   Error as ErrorIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon
 } from '@mui/icons-material';
 import apiService from '../services/api';
 import WarningDialog from '../components/ui/WarningDialog';
 import { Payment } from '../types';
 import { styled } from '@mui/material/styles';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import AutocompleteTextField from '../components/AutocompleteTextField';
 
 const StatusChip = styled(Chip)(({ theme }) => ({
   fontWeight: 600,
@@ -112,6 +120,10 @@ const SaleDetails: React.FC = () => {
     paymentDate: new Date().toISOString().split('T')[0]
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [deletePaymentDialogOpen, setDeletePaymentDialogOpen] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<Payment | null>(null);
+  const [deletePaymentPassword, setDeletePaymentPassword] = useState('');
+  const [deletePaymentLoading, setDeletePaymentLoading] = useState(false);
   
   // Utility function to validate ObjectId format
   const isValidObjectId = (id: string): boolean => {
@@ -126,14 +138,15 @@ const SaleDetails: React.FC = () => {
   const urlParams = new URLSearchParams(window.location.search);
   const isAddPaymentMode = urlParams.get('mode') === 'addPayment';
   const { mode } = useAppTheme();
+  const { user } = useAuth();
 
   const runValidation = (): boolean => {
     const errors: Record<string, string> = {};
 
     // Required fields
     if (!sale?.customer) errors.customer = 'Customer is required';
-    if (!sale?.quantity || Number(sale.quantity) <= 0) errors.quantity = 'Quantity must be greater than 0';
-    if (!sale?.rate || Number(sale.rate) <= 0) errors.rate = 'Rate must be greater than 0';
+    if (!sale?.quantity || sale.quantity === '' || Number(sale.quantity) <= 0) errors.quantity = 'Quantity must be greater than 0';
+    if (!sale?.rate || sale.rate === '' || Number(sale.rate) <= 0) errors.rate = 'Rate must be greater than 0';
     if (!sale?.invoiceDate) errors.invoiceDate = 'Invoice date is required';
     if (!sale?.dueDate || String(sale.dueDate).trim() === '') errors.dueDate = 'Due date is required';
 
@@ -156,10 +169,10 @@ const SaleDetails: React.FC = () => {
           containerNo: '',
           marka: '',
           description: '',
-          quantity: 1,
-          rate: 0,
-          vatPercentage: 0,
-          discount: 0,
+          quantity: '',
+          rate: '',
+          vatPercentage: '',
+          discount: '',
           amount: 0,
           receivedAmount: 0,
           outstandingAmount: 0,
@@ -248,10 +261,10 @@ const SaleDetails: React.FC = () => {
       
       // Recalculate amounts when quantity, rate, VAT percentage, or discount changes
       if (['quantity', 'rate', 'vatPercentage', 'discount'].includes(field)) {
-        const quantity = field === 'quantity' ? value : prev.quantity || 1;
-        const rate = field === 'rate' ? value : prev.rate || 0;
-        const vatPercentage = field === 'vatPercentage' ? value : prev.vatPercentage || 0;
-        const discount = field === 'discount' ? value : prev.discount || 0;
+        const quantity = field === 'quantity' ? (value === '' ? 0 : value) : (prev.quantity === '' ? 0 : prev.quantity || 0);
+        const rate = field === 'rate' ? (value === '' ? 0 : value) : (prev.rate === '' ? 0 : prev.rate || 0);
+        const vatPercentage = field === 'vatPercentage' ? (value === '' ? 0 : value) : (prev.vatPercentage === '' ? 0 : prev.vatPercentage || 0);
+        const discount = field === 'discount' ? (value === '' ? 0 : value) : (prev.discount === '' ? 0 : prev.discount || 0);
         
         const subtotal = quantity * rate;
         const vatAmount = (subtotal * vatPercentage) / 100;
@@ -281,7 +294,7 @@ const SaleDetails: React.FC = () => {
       setError(null);
 
       // Frontend validation: VAT requires customer TRN
-      const vatPct = Number(sale.vatPercentage || 0);
+      const vatPct = Number(sale.vatPercentage === '' ? 0 : sale.vatPercentage || 0);
       if (vatPct > 0) {
         const selectedCustomer = customers.find((c) => c.ename === sale.customer);
         if (!selectedCustomer || !selectedCustomer.trn || selectedCustomer.trn.trim() === '') {
@@ -387,17 +400,58 @@ const SaleDetails: React.FC = () => {
         setShowPaymentForm(false);
         navigate(`/sales/${id}`);
       } else {
-        setError('Failed to add payment');
+        setError(response.message || 'Failed to add payment');
       }
     } catch (err: any) {
       if (err.response?.status === 429) {
         setError('Too many requests. Please wait a moment and try again.');
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
       } else {
         setError('Failed to add payment: ' + (err.message || 'Unknown error'));
       }
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeletePaymentClick = (payment: Payment) => {
+    setPaymentToDelete(payment);
+    setDeletePaymentDialogOpen(true);
+    setDeletePaymentPassword('');
+  };
+
+  const handleDeletePaymentConfirm = async () => {
+    if (!paymentToDelete || !deletePaymentPassword.trim()) {
+      setError('Please enter your admin password');
+      return;
+    }
+
+    setDeletePaymentLoading(true);
+    try {
+      const response = await apiService.deletePayment(id!, paymentToDelete._id!, deletePaymentPassword);
+      if (response.success) {
+        setPayments(response.payments || []);
+        setDeletePaymentDialogOpen(false);
+        setPaymentToDelete(null);
+        setDeletePaymentPassword('');
+        setError(null);
+      } else {
+        setError(response.message || 'Failed to delete payment');
+      }
+    } catch (err: any) {
+      console.error('Error deleting payment:', err);
+      setError(err.response?.data?.message || 'Failed to delete payment');
+    } finally {
+      setDeletePaymentLoading(false);
+    }
+  };
+
+  const handleDeletePaymentCancel = () => {
+    setDeletePaymentDialogOpen(false);
+    setPaymentToDelete(null);
+    setDeletePaymentPassword('');
+    setError(null);
   };
 
   const getStatusIcon = (status: string) => {
@@ -531,35 +585,39 @@ const SaleDetails: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
-            <TextField
+            <AutocompleteTextField
               fullWidth
               label="Product"
+              field="product"
               value={sale.product || ''}
-              onChange={(e) => handleInputChange('product', e.target.value)}
+              onChange={(value) => handleInputChange('product', value)}
             />
           </Box>
           
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3, mt: 3 }}>
-            <TextField
+            <AutocompleteTextField
               fullWidth
               label="Container Number"
+              field="containerNo"
               value={sale.containerNo || ''}
-              onChange={(e) => handleInputChange('containerNo', e.target.value)}
+              onChange={(value) => handleInputChange('containerNo', value)}
             />
-            <TextField
+            <AutocompleteTextField
               fullWidth
               label="Marka"
+              field="marka"
               value={sale.marka || ''}
-              onChange={(e) => handleInputChange('marka', e.target.value)}
+              onChange={(value) => handleInputChange('marka', value)}
             />
           </Box>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3, mt: 3 }}>
-            <TextField
+            <AutocompleteTextField
               fullWidth
               label="Description"
+              field="description"
               value={sale.description || ''}
-              onChange={(e) => handleInputChange('description', e.target.value)}
+              onChange={(value) => handleInputChange('description', value)}
             />
             <FormControl fullWidth>
               <InputLabel>Status</InputLabel>
@@ -581,36 +639,78 @@ const SaleDetails: React.FC = () => {
               fullWidth
               type="number"
               label="Quantity"
-              value={sale.quantity || 1}
-              onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
+              value={sale.quantity || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') {
+                  handleInputChange('quantity', '');
+                } else {
+                  const numValue = parseInt(value);
+                  if (!isNaN(numValue) && numValue > 0) {
+                    handleInputChange('quantity', numValue);
+                  }
+                }
+              }}
               required
               error={Boolean(fieldErrors.quantity)}
               helperText={fieldErrors.quantity || ''}
+              inputProps={{ min: 1 }}
             />
             <TextField
               fullWidth
               type="number"
               label="Rate (AED)"
-              value={sale.rate || 0}
-              onChange={(e) => handleInputChange('rate', parseFloat(e.target.value) || 0)}
+              value={sale.rate || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') {
+                  handleInputChange('rate', '');
+                } else {
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && numValue >= 0) {
+                    handleInputChange('rate', numValue);
+                  }
+                }
+              }}
               required
               error={Boolean(fieldErrors.rate)}
               helperText={fieldErrors.rate || ''}
+              inputProps={{ min: 0, step: 0.01 }}
             />
             <TextField
               fullWidth
               type="number"
               label="VAT Percentage (%)"
-              value={sale.vatPercentage || 0}
-              onChange={(e) => handleInputChange('vatPercentage', parseFloat(e.target.value) || 0)}
+              value={sale.vatPercentage || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') {
+                  handleInputChange('vatPercentage', '');
+                } else {
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+                    handleInputChange('vatPercentage', numValue);
+                  }
+                }
+              }}
               inputProps={{ min: 0, max: 100, step: 0.01 }}
             />
             <TextField
               fullWidth
               type="number"
               label="Discount (AED)"
-              value={sale.discount || 0}
-              onChange={(e) => handleInputChange('discount', parseFloat(e.target.value) || 0)}
+              value={sale.discount || ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '') {
+                  handleInputChange('discount', '');
+                } else {
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && numValue >= 0) {
+                    handleInputChange('discount', numValue);
+                  }
+                }
+              }}
               inputProps={{ min: 0, step: 0.01 }}
             />
           </Box>
@@ -620,7 +720,7 @@ const SaleDetails: React.FC = () => {
               fullWidth
               type="number"
               label="Subtotal (AED)"
-              value={((sale.quantity || 1) * (sale.rate || 0)).toFixed(2)}
+              value={((sale.quantity === '' ? 0 : sale.quantity || 0) * (sale.rate === '' ? 0 : sale.rate || 0)).toFixed(2)}
               InputProps={{ readOnly: true }}
               helperText="Quantity × Rate"
             />
@@ -822,9 +922,18 @@ const SaleDetails: React.FC = () => {
                   variant="outlined"
                   startIcon={<PaymentIcon />}
                   onClick={() => setShowPaymentForm(true)}
+                  disabled={sale?.outstandingAmount <= 0}
                   size="small"
+                  sx={{
+                    borderColor: sale?.outstandingAmount <= 0 ? 'grey.400' : 'primary.main',
+                    color: sale?.outstandingAmount <= 0 ? 'grey.600' : 'primary.main',
+                    '&:hover': {
+                      borderColor: sale?.outstandingAmount <= 0 ? 'grey.400' : 'primary.dark',
+                      bgcolor: sale?.outstandingAmount <= 0 ? 'transparent' : 'primary.light',
+                    }
+                  }}
                 >
-                  Add Payment
+                  {sale?.outstandingAmount <= 0 ? 'Invoice Already Paid' : 'Add Payment'}
                 </Button>
               </Box>
 
@@ -875,6 +984,19 @@ const SaleDetails: React.FC = () => {
                               </Typography>
                             )}
                           </Box>
+                          {user?.role === 'admin' && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Tooltip title="Delete Payment">
+                                <IconButton 
+                                  size="small" 
+                                  color="error"
+                                  onClick={() => handleDeletePaymentClick(payment)}
+                                >
+                                  <DeleteIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          )}
                         </Box>
                       </CardContent>
                     </PaymentCard>
@@ -899,6 +1021,27 @@ const SaleDetails: React.FC = () => {
                   Add Payment
                 </Typography>
 
+                {/* Payment Status Alert */}
+                {sale && (
+                  <Alert 
+                    severity={sale.outstandingAmount <= 0 ? "success" : sale.outstandingAmount < sale.amount ? "info" : "warning"}
+                    sx={{ mb: 3 }}
+                  >
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {sale.outstandingAmount <= 0 
+                        ? "✅ This invoice is fully paid" 
+                        : `💰 Outstanding Amount: AED ${sale.outstandingAmount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}`
+                      }
+                    </Typography>
+                    {sale.outstandingAmount > 0 && (
+                      <Typography variant="body2" sx={{ mt: 0.5 }}>
+                        Total Amount: AED {sale.amount.toLocaleString('en-AE', { minimumFractionDigits: 2 })} | 
+                        Received: AED {sale.receivedAmount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}
+                      </Typography>
+                    )}
+                  </Alert>
+                )}
+
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 3 }}>
                   <TextField
                     label="Amount (AED)"
@@ -907,7 +1050,18 @@ const SaleDetails: React.FC = () => {
                     onChange={(e) => handlePaymentInputChange('amount', e.target.value)}
                     fullWidth
                     required
-                    inputProps={{ min: 0, step: 0.01 }}
+                    disabled={sale?.outstandingAmount <= 0}
+                    inputProps={{ 
+                      min: 0, 
+                      max: sale?.outstandingAmount || 0,
+                      step: 0.01 
+                    }}
+                    helperText={
+                      sale?.outstandingAmount > 0 
+                        ? `Maximum: AED ${sale.outstandingAmount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}`
+                        : "This invoice is already fully paid"
+                    }
+                    error={!!(paymentForm.amount && sale?.outstandingAmount > 0 && parseFloat(paymentForm.amount) > sale.outstandingAmount)}
                   />
 
                   <FormControl fullWidth>
@@ -969,10 +1123,26 @@ const SaleDetails: React.FC = () => {
                   <Button
                     variant="contained"
                     onClick={handleAddPayment}
-                    disabled={saving || !paymentForm.amount}
+                    disabled={
+                      saving || 
+                      !paymentForm.amount || 
+                      sale?.outstandingAmount <= 0 ||
+                      !!(paymentForm.amount && sale?.outstandingAmount > 0 && parseFloat(paymentForm.amount) > sale.outstandingAmount)
+                    }
                     startIcon={<PaymentIcon />}
+                    sx={{
+                      bgcolor: sale?.outstandingAmount <= 0 ? 'grey.400' : 'primary.main',
+                      '&:hover': {
+                        bgcolor: sale?.outstandingAmount <= 0 ? 'grey.400' : 'primary.dark',
+                      }
+                    }}
                   >
-                    {saving ? 'Adding Payment...' : 'Add Payment'}
+                    {saving 
+                      ? 'Adding Payment...' 
+                      : sale?.outstandingAmount <= 0 
+                        ? 'Invoice Already Paid' 
+                        : 'Add Payment'
+                    }
                   </Button>
                   <Button
                     variant="outlined"
@@ -1019,7 +1189,7 @@ const SaleDetails: React.FC = () => {
                 </ListItem>
                 <ListItem>
                   <ListItemText
-                    primary={`${sale.vatPercentage || 0}%`}
+                    primary={`${sale.vatPercentage === '' ? 0 : sale.vatPercentage || 0}%`}
                     secondary="VAT Percentage"
                   />
                 </ListItem>
@@ -1095,6 +1265,241 @@ const SaleDetails: React.FC = () => {
           </DetailCard>
         </Box>
       </Box>
+
+      {/* Delete Payment Confirmation Dialog */}
+      <Dialog
+        open={deletePaymentDialogOpen}
+        onClose={handleDeletePaymentCancel}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: mode === 'dark' ? '#1e293b' : '#ffffff',
+            color: mode === 'dark' ? '#f1f5f9' : '#1e293b',
+            borderRadius: 3,
+            boxShadow: mode === 'dark' 
+              ? '0 25px 50px -12px rgba(0, 0, 0, 0.8)' 
+              : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          pb: 1,
+          borderBottom: mode === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{
+              p: 1.5,
+              borderRadius: '50%',
+              bgcolor: mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <DeleteIcon sx={{ 
+                color: '#ef4444', 
+                fontSize: 24 
+              }} />
+            </Box>
+            <Box>
+              <Typography variant="h5" sx={{ 
+                fontWeight: 700,
+                color: mode === 'dark' ? '#f1f5f9' : '#1e293b',
+                mb: 0.5
+              }}>
+                Delete Payment Transaction
+              </Typography>
+              <Typography variant="body2" sx={{ 
+                color: mode === 'dark' ? '#94a3b8' : '#64748b',
+                fontWeight: 500
+              }}>
+                This action cannot be undone
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
+          <Typography variant="body1" sx={{ 
+            mb: 3, 
+            color: mode === 'dark' ? '#cbd5e1' : '#475569',
+            lineHeight: 1.6
+          }}>
+            Are you sure you want to permanently delete this payment transaction? This will also update the invoice's outstanding amount.
+          </Typography>
+          
+          {paymentToDelete && (
+            <Card sx={{ 
+              mb: 3, 
+              bgcolor: mode === 'dark' ? '#334155' : '#f8fafc',
+              border: mode === 'dark' ? '1px solid #475569' : '1px solid #e2e8f0',
+              borderRadius: 2,
+              overflow: 'hidden'
+            }}>
+              <CardContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'grid', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ 
+                      color: mode === 'dark' ? '#94a3b8' : '#64748b',
+                      fontWeight: 500
+                    }}>
+                      Amount:
+                    </Typography>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 700,
+                      color: mode === 'dark' ? '#10b981' : '#059669',
+                      fontSize: '1.1rem'
+                    }}>
+                      AED {paymentToDelete.amount?.toLocaleString('en-AE', { minimumFractionDigits: 2 })}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ 
+                      color: mode === 'dark' ? '#94a3b8' : '#64748b',
+                      fontWeight: 500
+                    }}>
+                      Payment Type:
+                    </Typography>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 600,
+                      color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                    }}>
+                      {paymentToDelete.paymentType?.toUpperCase()}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="body2" sx={{ 
+                      color: mode === 'dark' ? '#94a3b8' : '#64748b',
+                      fontWeight: 500
+                    }}>
+                      Date:
+                    </Typography>
+                    <Typography variant="body2" sx={{ 
+                      fontWeight: 600,
+                      color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                    }}>
+                      {new Date(paymentToDelete.paymentDate).toLocaleDateString()}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+          
+          <Box sx={{ 
+            p: 2.5, 
+            bgcolor: mode === 'dark' ? 'rgba(59, 130, 246, 0.05)' : 'rgba(59, 130, 246, 0.05)',
+            borderRadius: 2,
+            border: mode === 'dark' ? '1px solid rgba(59, 130, 246, 0.2)' : '1px solid rgba(59, 130, 246, 0.2)'
+          }}>
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold', color: mode === 'dark' ? '#f1f5f9' : '#1e293b' }}>
+              Admin Password Verification:
+            </Typography>
+            <TextField
+              fullWidth
+              type="password"
+              placeholder="Enter your admin password"
+              value={deletePaymentPassword}
+              onChange={(e) => setDeletePaymentPassword(e.target.value)}
+              variant="outlined"
+              size="medium"
+              error={!!error}
+              helperText={error}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: mode === 'dark' ? '#1e293b' : '#ffffff',
+                  borderRadius: 2,
+                  '& fieldset': {
+                    borderColor: mode === 'dark' ? '#475569' : '#d1d5db',
+                    borderWidth: 2,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: mode === 'dark' ? '#64748b' : '#9ca3af',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: mode === 'dark' ? '#3b82f6' : '#2563eb',
+                    borderWidth: 2,
+                  },
+                  '&.Mui-error fieldset': {
+                    borderColor: '#ef4444',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: mode === 'dark' ? '#94a3b8' : '#6b7280',
+                  fontWeight: 500,
+                },
+                '& .MuiInputBase-input': {
+                  color: mode === 'dark' ? '#f1f5f9' : '#1e293b',
+                  fontWeight: 500,
+                  py: 1.5,
+                },
+                '& .MuiFormHelperText-root': {
+                  color: mode === 'dark' ? '#f87171' : '#dc2626',
+                  fontWeight: 500,
+                },
+              }}
+            />
+          </Box>
+        </DialogContent>
+        
+        <DialogActions sx={{ 
+          p: 3, 
+          pt: 2,
+          gap: 2,
+          borderTop: mode === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0'
+        }}>
+          <Button 
+            onClick={handleDeletePaymentCancel} 
+            disabled={deletePaymentLoading}
+            variant="outlined"
+            size="large"
+            sx={{
+              minWidth: 120,
+              py: 1.5,
+              borderColor: mode === 'dark' ? '#475569' : '#d1d5db',
+              color: mode === 'dark' ? '#cbd5e1' : '#6b7280',
+              fontWeight: 600,
+              borderRadius: 2,
+              '&:hover': {
+                bgcolor: mode === 'dark' ? '#334155' : '#f8fafc',
+                borderColor: mode === 'dark' ? '#64748b' : '#9ca3af',
+              }
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeletePaymentConfirm}
+            color="error"
+            variant="contained"
+            disabled={deletePaymentLoading || !deletePaymentPassword.trim()}
+            startIcon={deletePaymentLoading ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
+            size="large"
+            sx={{
+              minWidth: 140,
+              py: 1.5,
+              bgcolor: '#dc2626',
+              fontWeight: 600,
+              borderRadius: 2,
+              boxShadow: '0 4px 14px 0 rgba(220, 38, 38, 0.3)',
+              '&:hover': {
+                bgcolor: '#b91c1c',
+                boxShadow: '0 6px 20px 0 rgba(220, 38, 38, 0.4)',
+                transform: 'translateY(-1px)',
+              },
+              '&:disabled': {
+                bgcolor: mode === 'dark' ? '#374151' : '#d1d5db',
+                color: mode === 'dark' ? '#6b7280' : '#9ca3af',
+                boxShadow: 'none',
+                transform: 'none',
+              },
+              transition: 'all 0.2s ease-in-out',
+            }}
+          >
+            {deletePaymentLoading ? 'Deleting...' : 'Delete Payment'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

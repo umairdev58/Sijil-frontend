@@ -917,11 +917,17 @@ const DubaiClearanceInvoices: React.FC = () => {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setReportDialogOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => setReportDialogOpen(false)}
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+            >
+              Cancel
+            </Button>
             <Button
               onClick={() => handleGenerateReport('csv')}
               startIcon={<CsvIcon />}
               variant="outlined"
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
             >
               Download CSV
             </Button>
@@ -929,6 +935,7 @@ const DubaiClearanceInvoices: React.FC = () => {
               onClick={() => handleGenerateReport('pdf')}
               startIcon={<PdfIcon />}
               variant="contained"
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
             >
               Download PDF
             </Button>

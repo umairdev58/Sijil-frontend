@@ -35,7 +35,7 @@ const BeautifulDownloadButton: React.FC<BeautifulDownloadButtonProps> = ({
         background: 'var(--button-color)',
         position: 'relative',
         textAlign: 'center',
-        borderRadius: '0.45em',
+        borderRadius: '999px',
         fontFamily: 'Arial',
         transition: 'background 0.3s',
         cursor: disabled ? 'not-allowed' : 'pointer',

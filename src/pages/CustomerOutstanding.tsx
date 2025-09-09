@@ -38,31 +38,38 @@ import {
   Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
   Print as PrintIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import apiService from '../services/api';
-import { CustomerOutstanding } from '../types';
+import { CustomerOutstanding, ProductOutstanding, OutstandingData } from '../types';
 import BeautifulDownloadButton from '../components/BeautifulDownloadButton';
 import BeautifulRefreshButton from '../components/BeautifulRefreshButton';
+import { useTheme } from '../contexts/ThemeContext';
 
 const CustomerOutstandingPage: React.FC = () => {
-  const [customerOutstanding, setCustomerOutstanding] = useState<CustomerOutstanding[]>([]);
+  const { mode } = useTheme();
+  const [outstandingData, setOutstandingData] = useState<OutstandingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [uniqueProducts, setUniqueProducts] = useState<string[]>([]);
 
   // Filter states
   const [filters, setFilters] = useState({
     minAmount: '',
     maxAmount: '',
     status: '',
+    product: '',
+    groupBy: 'customer' as 'customer' | 'product',
   });
 
   // Summary statistics
@@ -84,12 +91,14 @@ const CustomerOutstandingPage: React.FC = () => {
         minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
         status: filters.status || undefined,
+        product: filters.product || undefined,
+        groupBy: filters.groupBy,
         page: page + 1,
         limit: rowsPerPage,
       });
       
       if (response.success) {
-        setCustomerOutstanding(response.data);
+        setOutstandingData(response.data);
         setTotalCount(response.pagination.total);
         setSummaryStats(response.summary);
       }
@@ -98,6 +107,17 @@ const CustomerOutstandingPage: React.FC = () => {
       setError(error.response?.data?.message || 'Failed to fetch customer outstanding amounts');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUniqueProducts = async () => {
+    try {
+      const response = await apiService.getUniqueProducts();
+      if (response.success) {
+        setUniqueProducts(response.data);
+      }
+    } catch (error: any) {
+      console.error('Error fetching unique products:', error);
     }
   };
 
@@ -110,6 +130,8 @@ const CustomerOutstandingPage: React.FC = () => {
         minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
         status: filters.status || undefined,
+        product: filters.product || undefined,
+        groupBy: filters.groupBy,
       });
 
       setSuccessMessage('PDF downloaded successfully');
@@ -123,8 +145,14 @@ const CustomerOutstandingPage: React.FC = () => {
   };
 
   const handleSearch = () => {
+    setSearchQuery(searchInput.trim());
     setPage(0);
-    fetchCustomerOutstanding();
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchQuery('');
+    setPage(0);
   };
 
   const handlePageChange = (event: unknown, newPage: number) => {
@@ -141,9 +169,27 @@ const CustomerOutstandingPage: React.FC = () => {
     fetchCustomerOutstanding();
   }, [page, rowsPerPage]);
 
+  // Auto-search with debouncing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== searchQuery) {
+        setSearchQuery(searchInput.trim());
+        setPage(0);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Fetch data when search query changes
+  useEffect(() => {
+    fetchCustomerOutstanding();
+  }, [searchQuery]);
+
   // Initial data load
   useEffect(() => {
     fetchCustomerOutstanding();
+    fetchUniqueProducts();
   }, []);
 
   const handleFilterChange = (field: string, value: string) => {
@@ -155,7 +201,10 @@ const CustomerOutstandingPage: React.FC = () => {
       minAmount: '',
       maxAmount: '',
       status: '',
+      product: '',
+      groupBy: 'customer',
     });
+    setSearchInput('');
     setSearchQuery('');
     setPage(0);
   };
@@ -189,14 +238,14 @@ const CustomerOutstandingPage: React.FC = () => {
 
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, maxWidth: '100%', overflow: 'hidden' }}>
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
           Customer Outstanding Amounts
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Track unpaid amounts for each customer
+          Track unpaid amounts grouped by product
         </Typography>
       </Box>
 
@@ -250,86 +299,133 @@ const CustomerOutstandingPage: React.FC = () => {
       </Box>
 
       {/* Search and Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
+      <Paper sx={{ 
+        p: 2, mb: 3,
+        bgcolor: mode === 'dark' ? 'rgba(30,41,59,0.8)' : 'background.paper',
+        border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : '1px solid rgba(2,6,23,0.06)',
+        borderRadius: 3,
+      }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto' }, gap: 2, alignItems: 'center' }}>
           <TextField
-            placeholder="Search customers..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            fullWidth
+            placeholder="Search customers, products, amounts..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if ((e as any).key === 'Enter') handleSearch(); }}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 999,
+                backgroundColor: mode === 'dark' ? 'rgba(15,23,42,0.6)' : 'rgba(2,6,23,0.03)',
+                boxShadow: 'inset 0 0 0 1px rgba(148,163,184,0.15)',
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main' },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main', borderWidth: 1 },
+              },
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon />
+                  <SearchIcon color="action" />
                 </InputAdornment>
               ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  {searchInput && (
+                    <IconButton size="small" onClick={handleClearSearch}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                </InputAdornment>
+              )
             }}
-            sx={{ minWidth: 250 }}
           />
-          
-          <Button
-            variant="outlined"
-            startIcon={<FilterIcon />}
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            Filters
-          </Button>
-          
-          <Button
-            variant="contained"
-            onClick={handleSearch}
-            disabled={loading}
-          >
-            Search
-          </Button>
-          
-          <Button
-            variant="outlined"
-            onClick={handleClearFilters}
-            disabled={loading}
-          >
-            Clear
-          </Button>
-          
-          <Box sx={{ flexGrow: 1 }} />
-          
-          <BeautifulDownloadButton
-            onClick={handleDownloadPDF}
-            disabled={downloadingPDF || customerOutstanding.length === 0}
-            loading={downloadingPDF}
-          />
-          
-          <BeautifulRefreshButton
-            onClick={fetchCustomerOutstanding}
-            disabled={loading}
-          />
-        </Stack>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              startIcon={<FilterIcon />}
+              onClick={() => setShowFilters(!showFilters)}
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+            >
+              Filters
+            </Button>
+            
+            <Button
+              variant="outlined"
+              onClick={handleClearFilters}
+              disabled={loading}
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+            >
+              Clear
+            </Button>
+            
+            <BeautifulDownloadButton
+              onClick={handleDownloadPDF}
+              disabled={downloadingPDF || outstandingData.length === 0}
+              loading={downloadingPDF}
+            />
+            
+            <BeautifulRefreshButton
+              onClick={fetchCustomerOutstanding}
+              disabled={loading}
+            />
+          </Stack>
+        </Box>
 
         {/* Advanced Filters */}
         <Collapse in={showFilters}>
           <Divider sx={{ my: 2 }} />
           <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
-                         <TextField
-               label="Min Amount"
-               type="number"
-               value={filters.minAmount}
-               onChange={(e) => handleFilterChange('minAmount', e.target.value)}
-               InputProps={{
-                 startAdornment: <InputAdornment position="start">AED</InputAdornment>,
-               }}
-               sx={{ minWidth: 150 }}
-             />
+            <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel>Group By</InputLabel>
+              <Select
+                value={filters.groupBy}
+                label="Group By"
+                onChange={(e) => handleFilterChange('groupBy', e.target.value)}
+              >
+                <MenuItem value="customer">Customer</MenuItem>
+                <MenuItem value="product">Product</MenuItem>
+              </Select>
+            </FormControl>
+
+            {filters.groupBy === 'product' && (
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>Product</InputLabel>
+                <Select
+                  value={filters.product}
+                  label="Product"
+                  onChange={(e) => handleFilterChange('product', e.target.value)}
+                >
+                  <MenuItem value="">All Products</MenuItem>
+                  {uniqueProducts?.map((product) => (
+                    <MenuItem key={product} value={product}>
+                      {product}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+
+            <TextField
+              label="Min Amount"
+              type="number"
+              value={filters.minAmount}
+              onChange={(e) => handleFilterChange('minAmount', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">AED</InputAdornment>,
+              }}
+              sx={{ minWidth: 150 }}
+            />
             
-                         <TextField
-               label="Max Amount"
-               type="number"
-               value={filters.maxAmount}
-               onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
-               InputProps={{
-                 startAdornment: <InputAdornment position="start">AED</InputAdornment>,
-               }}
-               sx={{ minWidth: 150 }}
-             />
+            <TextField
+              label="Max Amount"
+              type="number"
+              value={filters.maxAmount}
+              onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">AED</InputAdornment>,
+              }}
+              sx={{ minWidth: 150 }}
+            />
             
             <FormControl sx={{ minWidth: 150 }}>
               <InputLabel>Status</InputLabel>
@@ -363,91 +459,255 @@ const CustomerOutstandingPage: React.FC = () => {
       )}
 
       {/* Results */}
-      {!loading && customerOutstanding.length === 0 && !error && (
+      {!loading && outstandingData.length === 0 && !error && (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h6" color="text.secondary">
-            No customers with outstanding amounts found
+            No outstanding amounts found
           </Typography>
         </Paper>
       )}
 
       {/* Table */}
-      {!loading && customerOutstanding.length > 0 && (
+      {!loading && outstandingData.length > 0 && (
         <Paper>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell><strong>Customer Name</strong></TableCell>
-                  <TableCell align="right"><strong>Outstanding Amount</strong></TableCell>
-                  <TableCell align="center"><strong>Total Invoices</strong></TableCell>
-                  <TableCell align="center"><strong>Unpaid</strong></TableCell>
-                  <TableCell align="center"><strong>Partially Paid</strong></TableCell>
-                  <TableCell align="center"><strong>Overdue</strong></TableCell>
-                  <TableCell align="center"><strong>Status</strong></TableCell>
-                  <TableCell align="center"><strong>Last Payment</strong></TableCell>
-                  <TableCell align="center"><strong>Oldest Due Date</strong></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {customerOutstanding.map((customer) => (
-                    <TableRow key={customer._id} hover>
-                      <TableCell>
-                        <Typography variant="subtitle2" fontWeight="bold">
-                          {customer.customerName}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                                                 <Typography variant="subtitle2" color="error.main" fontWeight="bold">
-                           AED {customer.totalOutstanding.toLocaleString()}
-                         </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Typography variant="body2">
-                          {customer.invoiceCount}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Typography variant="body2" color="info.main">
-                          {customer.unpaidInvoices}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Typography variant="body2" color="warning.main">
-                          {customer.partiallyPaidInvoices}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Typography variant="body2" color="error.main">
-                          {customer.overdueInvoices}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          label={getStatusLabel(customer.status)}
-                          color={getStatusColor(customer.status) as any}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Typography variant="body2">
-                          {customer.lastPaymentDate 
-                            ? new Date(customer.lastPaymentDate).toLocaleDateString('en-GB')
-                            : 'Never'
-                          }
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Typography variant="body2">
-                          {new Date(customer.oldestDueDate).toLocaleDateString('en-GB')}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {filters.groupBy === 'product' ? (
+            // Product Grouped View - Compact and Theme-Consistent
+            <Box>
+              {outstandingData?.map((productData) => {
+                const product = productData as ProductOutstanding;
+                return (
+                  <Box key={product._id} sx={{ mb: 3 }}>
+                    {/* Product Header - Compact */}
+                    <Box sx={{ 
+                      p: 2, 
+                      bgcolor: mode === 'dark' ? '#1e293b' : '#f8fafc', 
+                      border: mode === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+                      borderRadius: '8px 8px 0 0',
+                      mb: 0
+                    }}>
+                      <Typography variant="h6" fontWeight="600" sx={{ 
+                        color: mode === 'dark' ? '#f1f5f9' : '#1e293b',
+                        mb: 0.5
+                      }}>
+                        {product.productName}
+                      </Typography>
+                      <Typography variant="body2" sx={{ 
+                        color: mode === 'dark' ? '#94a3b8' : '#64748b',
+                        fontSize: '0.875rem'
+                      }}>
+                        Total Outstanding: AED {product.totalOutstanding.toLocaleString()} | 
+                        {product.totalCustomers} Customer{product.totalCustomers !== 1 ? 's' : ''} | 
+                        {product.totalInvoices} Invoice{product.totalInvoices !== 1 ? 's' : ''}
+                      </Typography>
+                    </Box>
+
+                    {/* Customers Table - Matching Original Style */}
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ 
+                              bgcolor: mode === 'dark' ? '#1e293b' : '#f8fafc',
+                              borderColor: mode === 'dark' ? '#334155' : '#e2e8f0',
+                              fontWeight: 600,
+                              color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                            }}>
+                              Customer Name
+                            </TableCell>
+                            <TableCell align="right" sx={{ 
+                              bgcolor: mode === 'dark' ? '#1e293b' : '#f8fafc',
+                              borderColor: mode === 'dark' ? '#334155' : '#e2e8f0',
+                              fontWeight: 600,
+                              color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                            }}>
+                              Outstanding Amount
+                            </TableCell>
+                            <TableCell align="center" sx={{ 
+                              bgcolor: mode === 'dark' ? '#1e293b' : '#f8fafc',
+                              borderColor: mode === 'dark' ? '#334155' : '#e2e8f0',
+                              fontWeight: 600,
+                              color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                            }}>
+                              Invoices
+                            </TableCell>
+                            <TableCell align="center" sx={{ 
+                              bgcolor: mode === 'dark' ? '#1e293b' : '#f8fafc',
+                              borderColor: mode === 'dark' ? '#334155' : '#e2e8f0',
+                              fontWeight: 600,
+                              color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                            }}>
+                              Unpaid
+                            </TableCell>
+                            <TableCell align="center" sx={{ 
+                              bgcolor: mode === 'dark' ? '#1e293b' : '#f8fafc',
+                              borderColor: mode === 'dark' ? '#334155' : '#e2e8f0',
+                              fontWeight: 600,
+                              color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                            }}>
+                              Partially Paid
+                            </TableCell>
+                            <TableCell align="center" sx={{ 
+                              bgcolor: mode === 'dark' ? '#1e293b' : '#f8fafc',
+                              borderColor: mode === 'dark' ? '#334155' : '#e2e8f0',
+                              fontWeight: 600,
+                              color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                            }}>
+                              Overdue
+                            </TableCell>
+                            <TableCell align="center" sx={{ 
+                              bgcolor: mode === 'dark' ? '#1e293b' : '#f8fafc',
+                              borderColor: mode === 'dark' ? '#334155' : '#e2e8f0',
+                              fontWeight: 600,
+                              color: mode === 'dark' ? '#f1f5f9' : '#1e293b'
+                            }}>
+                              Status
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {product.customers?.map((customer) => (
+                            <TableRow key={customer._id} hover>
+                              <TableCell sx={{ 
+                                borderColor: mode === 'dark' ? '#334155' : '#e2e8f0'
+                              }}>
+                                <Typography variant="body2" fontWeight="500">
+                                  {customer.customerName}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="right" sx={{ 
+                                borderColor: mode === 'dark' ? '#334155' : '#e2e8f0'
+                              }}>
+                                <Typography variant="body2" color="error.main" fontWeight="600">
+                                  AED {customer.totalOutstanding.toLocaleString()}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center" sx={{ 
+                                borderColor: mode === 'dark' ? '#334155' : '#e2e8f0'
+                              }}>
+                                <Typography variant="body2">
+                                  {customer.invoiceCount}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center" sx={{ 
+                                borderColor: mode === 'dark' ? '#334155' : '#e2e8f0'
+                              }}>
+                                <Typography variant="body2" color="info.main">
+                                  {customer.unpaidInvoices}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center" sx={{ 
+                                borderColor: mode === 'dark' ? '#334155' : '#e2e8f0'
+                              }}>
+                                <Typography variant="body2" color="warning.main">
+                                  {customer.partiallyPaidInvoices}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center" sx={{ 
+                                borderColor: mode === 'dark' ? '#334155' : '#e2e8f0'
+                              }}>
+                                <Typography variant="body2" color="error.main">
+                                  {customer.overdueInvoices}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center" sx={{ 
+                                borderColor: mode === 'dark' ? '#334155' : '#e2e8f0'
+                              }}>
+                                <Chip
+                                  label={getStatusLabel(customer.status)}
+                                  color={getStatusColor(customer.status) as any}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                );
+              })}
+            </Box>
+          ) : (
+            // Customer Grouped View (Original)
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Customer Name</strong></TableCell>
+                    <TableCell align="right"><strong>Outstanding Amount</strong></TableCell>
+                    <TableCell align="center"><strong>Total Invoices</strong></TableCell>
+                    <TableCell align="center"><strong>Unpaid</strong></TableCell>
+                    <TableCell align="center"><strong>Partially Paid</strong></TableCell>
+                    <TableCell align="center"><strong>Overdue</strong></TableCell>
+                    <TableCell align="center"><strong>Status</strong></TableCell>
+                    <TableCell align="center"><strong>Last Payment</strong></TableCell>
+                    <TableCell align="center"><strong>Oldest Due Date</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {outstandingData?.map((customer) => {
+                    const customerData = customer as CustomerOutstanding;
+                    return (
+                      <TableRow key={customerData._id} hover>
+                        <TableCell>
+                          <Typography variant="subtitle2" fontWeight="bold">
+                            {customerData.customerName}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="subtitle2" color="error.main" fontWeight="bold">
+                            AED {customerData.totalOutstanding.toLocaleString()}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Typography variant="body2">
+                            {customerData.invoiceCount}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Typography variant="body2" color="info.main">
+                            {customerData.unpaidInvoices}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Typography variant="body2" color="warning.main">
+                            {customerData.partiallyPaidInvoices}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Typography variant="body2" color="error.main">
+                            {customerData.overdueInvoices}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={getStatusLabel(customerData.status)}
+                            color={getStatusColor(customerData.status) as any}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Typography variant="body2">
+                            {customerData.lastPaymentDate 
+                              ? new Date(customerData.lastPaymentDate).toLocaleDateString('en-GB')
+                              : 'Never'
+                            }
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Typography variant="body2">
+                            {new Date(customerData.oldestDueDate).toLocaleDateString('en-GB')}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
           
           {/* Pagination */}
           <TablePagination

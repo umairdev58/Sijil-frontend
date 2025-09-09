@@ -208,6 +208,19 @@ export interface CustomerOutstanding {
   status: 'unpaid' | 'partially_paid' | 'overdue';
 }
 
+export interface ProductOutstanding {
+  _id: string;
+  productName: string;
+  totalOutstanding: number;
+  totalAmount: number;
+  totalReceived: number;
+  totalInvoices: number;
+  totalCustomers: number;
+  customers: CustomerOutstanding[];
+}
+
+export type OutstandingData = CustomerOutstanding | ProductOutstanding;
+
 export interface FreightInvoice {
   _id: string;
   invoice_number: string;

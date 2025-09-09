@@ -277,7 +277,7 @@ const SalesReportPage: React.FC = () => {
             variant="outlined" 
             startIcon={<FilterIcon />}
             onClick={() => setShowFilters(!showFilters)}
-            sx={{ borderRadius: 2 }}
+            sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
           >
             Filters
           </Button>
@@ -285,7 +285,7 @@ const SalesReportPage: React.FC = () => {
             variant="outlined" 
             startIcon={<DownloadIcon />}
             onClick={() => handleDownloadReport('csv')}
-            sx={{ borderRadius: 2 }}
+            sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
           >
             Export CSV
           </Button>
@@ -293,7 +293,14 @@ const SalesReportPage: React.FC = () => {
             variant="outlined" 
             startIcon={<PdfIcon />}
             onClick={() => handleDownloadReport('pdf')}
-            sx={{ borderRadius: 2, bgcolor: '#ff4444', color: 'white', '&:hover': { bgcolor: '#cc0000' } }}
+            sx={{ 
+              borderRadius: 999, 
+              textTransform: 'none', 
+              fontWeight: 600,
+              bgcolor: '#ff4444', 
+              color: 'white', 
+              '&:hover': { bgcolor: '#cc0000' } 
+            }}
           >
             Export PDF
           </Button>
@@ -302,7 +309,13 @@ const SalesReportPage: React.FC = () => {
             startIcon={<RefreshIcon />}
             onClick={handleGenerateReport}
             disabled={loading}
-            sx={{ bgcolor: '#3ca12c', '&:hover': { bgcolor: '#338f27' }, borderRadius: 2 }}
+            sx={{ 
+              bgcolor: '#3ca12c', 
+              '&:hover': { bgcolor: '#338f27' }, 
+              borderRadius: 999,
+              textTransform: 'none',
+              fontWeight: 600
+            }}
           >
             {loading ? 'Generating...' : 'Generate Report'}
           </Button>

@@ -62,6 +62,7 @@ import {
   Payment as PaymentIcon,
   Visibility as VisibilityIcon,
   Assessment as AssessmentIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -71,9 +72,11 @@ import { styled, useTheme } from '@mui/material/styles';
 import apiService from '../services/api';
 import { FreightInvoice, FreightPayment } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 
 const FreightInvoices: React.FC = () => {
   const theme = useTheme();
+  const { mode } = useAppTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [rows, setRows] = useState<FreightInvoice[]>([]);
@@ -82,6 +85,7 @@ const FreightInvoices: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -118,6 +122,18 @@ const FreightInvoices: React.FC = () => {
   const [reportFormat, setReportFormat] = useState<'pdf' | 'csv'>('pdf');
   const [reportGroupBy, setReportGroupBy] = useState<'none' | 'agent' | 'status' | 'month'>('none');
   const [includePayments, setIncludePayments] = useState(true);
+
+  // Auto-search with debouncing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== search) {
+        setSearch(searchInput.trim());
+        setPage(0);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     load();
@@ -305,6 +321,12 @@ const FreightInvoices: React.FC = () => {
            minAmount || maxAmount || dueDateFrom || dueDateTo;
   };
 
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearch('');
+    setPage(0);
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box sx={{ p: 3, backgroundColor: 'background.default', minHeight: '100vh' }}>
@@ -447,38 +469,74 @@ const FreightInvoices: React.FC = () => {
         </Box>
 
         {/* Search and Filters */}
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper sx={{ 
+          p: 3, mb: 3,
+          bgcolor: mode === 'dark' ? 'rgba(30,41,59,0.8)' : 'background.paper',
+          border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : '1px solid rgba(2,6,23,0.06)',
+          borderRadius: 3,
+        }}>
           <Stack spacing={3}>
             {/* Basic Search */}
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto auto auto' }, gap: 2, alignItems: 'center' }}>
               <TextField
-                placeholder="Search by invoice number or agent..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                fullWidth
+                placeholder="Search by invoice number, agent, amount..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => { if ((e as any).key === 'Enter') setSearch(searchInput.trim()); }}
+                variant="outlined"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 999,
+                    backgroundColor: mode === 'dark' ? 'rgba(15,23,42,0.6)' : 'rgba(2,6,23,0.03)',
+                    boxShadow: 'inset 0 0 0 1px rgba(148,163,184,0.15)',
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main', borderWidth: 1 },
+                  },
+                }}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon />
+                      <SearchIcon color="action" />
                     </InputAdornment>
                   ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {searchInput && (
+                        <IconButton size="small" onClick={handleClearSearch}>
+                          <ClearIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </InputAdornment>
+                  )
                 }}
-                sx={{ flex: 1 }}
               />
               <Button
                 variant="outlined"
                 startIcon={<FilterIcon />}
                 onClick={() => setShowFilters(!showFilters)}
                 color={hasActiveFilters() ? 'primary' : 'inherit'}
+                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
               >
                 Filters {hasActiveFilters() && `(${Object.values({search, statusFilter, agentFilter, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo}).filter(Boolean).length})`}
               </Button>
-              <Button variant="outlined" onClick={clearFilters} disabled={!hasActiveFilters()}>
+              <Button 
+                variant="outlined" 
+                onClick={clearFilters} 
+                disabled={!hasActiveFilters()}
+                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+              >
                 Clear
               </Button>
-              <Button variant="outlined" startIcon={<RefreshIcon />} onClick={load}>
+              <Button 
+                variant="outlined" 
+                startIcon={<RefreshIcon />} 
+                onClick={load}
+                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+              >
                 Refresh
               </Button>
-            </Stack>
+            </Box>
 
             {/* Advanced Filters */}
             {showFilters && (
@@ -1119,6 +1177,9 @@ const FreightInvoices: React.FC = () => {
               onClick={() => setReportDialogOpen(false)}
               variant="outlined"
               sx={{ 
+                borderRadius: 999,
+                textTransform: 'none',
+                fontWeight: 600,
                 borderColor: 'divider',
                 color: 'text.primary',
                 '&:hover': { 
@@ -1134,13 +1195,15 @@ const FreightInvoices: React.FC = () => {
               variant="contained"
               startIcon={reportFormat === 'pdf' ? <PdfIcon /> : <CsvIcon />}
               sx={{ 
+                borderRadius: 999,
+                textTransform: 'none',
+                fontWeight: 600,
                 background: theme.palette.mode === 'dark' 
                   ? 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)'
                   : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
                 px: 4,
                 py: 1.5,
                 fontSize: '1rem',
-                fontWeight: 'bold',
                 '&:hover': {
                   background: theme.palette.mode === 'dark' 
                     ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)'

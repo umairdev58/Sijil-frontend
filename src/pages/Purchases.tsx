@@ -30,15 +30,18 @@ import {
   Visibility as VisibilityIcon,
   Search as SearchIcon,
   AttachMoney as MoneyIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import apiService from '../services/api';
 import { Purchase } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { styled } from '@mui/material/styles';
+import { useTheme } from '../contexts/ThemeContext';
 
  
 
 const PurchasesPage: React.FC = () => {
+  const { mode } = useTheme();
   const [rows, setRows] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +50,7 @@ const PurchasesPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const navigate = useNavigate();
 
   const load = async () => {
@@ -63,6 +67,18 @@ const PurchasesPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Auto-search with debouncing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== search) {
+        setSearch(searchInput.trim());
+        setPage(0);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => { load(); }, [page, rowsPerPage, search]);
 
@@ -86,6 +102,12 @@ const PurchasesPage: React.FC = () => {
     } catch (e: any) {
       setError(e?.message || 'Failed to delete');
     }
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearch('');
+    setPage(0);
   };
 
   const Title = styled(Typography)(({ theme }) => ({
@@ -141,22 +163,55 @@ const PurchasesPage: React.FC = () => {
       </Box>
 
       {/* List and search */}
-      <Paper sx={{ p: 2 }}>
-        <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+      <Paper sx={{ 
+        p: 2,
+        bgcolor: mode === 'dark' ? 'rgba(30,41,59,0.8)' : 'background.paper',
+        border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : '1px solid rgba(2,6,23,0.06)',
+        borderRadius: 3,
+      }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto' }, gap: 2, alignItems: 'center', mb: 2 }}>
           <TextField
-            placeholder="Search container..."
-            value={search}
-            onChange={(e) => { setPage(0); setSearch(e.target.value); }}
             fullWidth
+            placeholder="Search containers, products, suppliers..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if ((e as any).key === 'Enter') setSearch(searchInput.trim()); }}
+            variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 999,
+                backgroundColor: mode === 'dark' ? 'rgba(15,23,42,0.6)' : 'rgba(2,6,23,0.03)',
+                boxShadow: 'inset 0 0 0 1px rgba(148,163,184,0.15)',
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main' },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main', borderWidth: 1 },
+              },
+            }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon />
+                  <SearchIcon color="action" />
                 </InputAdornment>
               ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  {searchInput && (
+                    <IconButton size="small" onClick={handleClearSearch}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                </InputAdornment>
+              )
             }}
           />
-        </Stack>
+          <Button
+            variant="outlined"
+            onClick={handleClearSearch}
+            disabled={loading}
+            sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+          >
+            Clear
+          </Button>
+        </Box>
         {loading && <LinearProgress sx={{ mb: 1 }} />}
         <TableContainer>
           <Table size="small" sx={{
