@@ -295,7 +295,8 @@ class ApiService {
       params.set('format', 'csv');
     }
 
-    const url = `${this.api.defaults.baseURL}/sales/report?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/sales/report?${params.toString()}`;
     const token = localStorage.getItem('token');
     const format = params.get('format') || 'csv';
     const fileExtension = format === 'pdf' ? 'pdf' : 'csv';
@@ -368,7 +369,8 @@ class ApiService {
       params.set('format', 'csv');
     }
 
-    const url = `${this.api.defaults.baseURL}/purchases/report?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/purchases/report?${params.toString()}`;
     const token = localStorage.getItem('token');
     const format = params.get('format') || 'csv';
     const fileExtension = format === 'pdf' ? 'pdf' : 'csv';
@@ -403,7 +405,8 @@ class ApiService {
   }
 
   async printInvoice(id: string): Promise<void> {
-    const url = `${this.api.defaults.baseURL}/sales/${id}/print`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/sales/${id}/print`;
     const token = localStorage.getItem('token');
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url);
@@ -652,18 +655,24 @@ class ApiService {
       }
     });
 
-    const response = await this.api.get(`/sales/customer-outstanding/pdf?${params.toString()}`, {
-      responseType: 'blob'
+    // Use fetch to reduce noisy Axios/XHR console errors when download managers intercept
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const requestUrl = `${base}/sales/customer-outstanding/pdf?${params.toString()}`;
+    const resp = await fetch(requestUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      }
     });
-    
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
+    if (!resp.ok) throw new Error(`Failed to fetch PDF (${resp.status})`);
+    const blob = await resp.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = blobUrl;
     a.download = `customer-outstanding-${new Date().toISOString().split('T')[0]}.pdf`;
     document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
+    window.URL.revokeObjectURL(blobUrl);
     document.body.removeChild(a);
   }
 
@@ -704,7 +713,8 @@ class ApiService {
   }
 
   async exportDailyLedgerPDF(date: string): Promise<void> {
-    const url = `${this.api.defaults.baseURL}/daily-ledger/${date}/export/pdf`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/daily-ledger/${date}/export/pdf`;
     const token = localStorage.getItem('token');
     
     const xhr = new XMLHttpRequest();
@@ -791,7 +801,8 @@ class ApiService {
   }
 
   async printFreightInvoice(id: string): Promise<void> {
-    const url = `${this.api.defaults.baseURL}/freight-invoices/${id}/print`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/freight-invoices/${id}/print`;
     const token = localStorage.getItem('token');
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url);
@@ -833,7 +844,8 @@ class ApiService {
       }
     });
 
-    const url = `${this.api.defaults.baseURL}/freight-invoices/report/pdf?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/freight-invoices/report/pdf?${params.toString()}`;
     const token = localStorage.getItem('token');
     
     const xhr = new XMLHttpRequest();
@@ -878,7 +890,8 @@ class ApiService {
       }
     });
 
-    const url = `${this.api.defaults.baseURL}/freight-invoices/report/csv?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/freight-invoices/report/csv?${params.toString()}`;
     const token = localStorage.getItem('token');
     
     const xhr = new XMLHttpRequest();
@@ -959,7 +972,8 @@ class ApiService {
   }
 
   async printTransportInvoice(id: string): Promise<void> {
-    const url = `${this.api.defaults.baseURL}/transport-invoices/${id}/print`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/transport-invoices/${id}/print`;
     const token = localStorage.getItem('token');
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url);
@@ -1001,7 +1015,8 @@ class ApiService {
       }
     });
 
-    const url = `${this.api.defaults.baseURL}/transport-invoices/report/pdf?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/transport-invoices/report/pdf?${params.toString()}`;
     const token = localStorage.getItem('token');
     
     const xhr = new XMLHttpRequest();
@@ -1046,7 +1061,8 @@ class ApiService {
       }
     });
 
-    const url = `${this.api.defaults.baseURL}/transport-invoices/report/csv?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/transport-invoices/report/csv?${params.toString()}`;
     const token = localStorage.getItem('token');
     
     const xhr = new XMLHttpRequest();
@@ -1127,7 +1143,8 @@ class ApiService {
   }
 
   async printDubaiTransportInvoice(id: string): Promise<void> {
-    const url = `${this.api.defaults.baseURL}/dubai-transport-invoices/${id}/print`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/dubai-transport-invoices/${id}/print`;
     const token = localStorage.getItem('token');
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url);
@@ -1169,7 +1186,8 @@ class ApiService {
       }
     });
 
-    const url = `${this.api.defaults.baseURL}/dubai-transport-invoices/report/pdf?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/dubai-transport-invoices/report/pdf?${params.toString()}`;
     const token = localStorage.getItem('token');
     
     const xhr = new XMLHttpRequest();
@@ -1214,7 +1232,8 @@ class ApiService {
       }
     });
 
-    const url = `${this.api.defaults.baseURL}/dubai-transport-invoices/report/csv?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/dubai-transport-invoices/report/csv?${params.toString()}`;
     const token = localStorage.getItem('token');
     
     const xhr = new XMLHttpRequest();
@@ -1295,7 +1314,8 @@ class ApiService {
   }
 
   async printDubaiClearanceInvoice(id: string): Promise<void> {
-    const url = `${this.api.defaults.baseURL}/dubai-clearance-invoices/${id}/print`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/dubai-clearance-invoices/${id}/print`;
     const token = localStorage.getItem('token');
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url);
@@ -1337,7 +1357,8 @@ class ApiService {
       }
     });
 
-    const url = `${this.api.defaults.baseURL}/dubai-clearance-invoices/report/pdf?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/dubai-clearance-invoices/report/pdf?${params.toString()}`;
     const token = localStorage.getItem('token');
     
     const xhr = new XMLHttpRequest();
@@ -1382,7 +1403,8 @@ class ApiService {
       }
     });
 
-    const url = `${this.api.defaults.baseURL}/dubai-clearance-invoices/report/csv?${params.toString()}`;
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const url = `${base}/dubai-clearance-invoices/report/csv?${params.toString()}`;
     const token = localStorage.getItem('token');
     
     const xhr = new XMLHttpRequest();
@@ -1411,6 +1433,29 @@ class ApiService {
   async getContainerStatement(containerNo: string): Promise<ApiResponse<any>> {
     const response: AxiosResponse = await this.api.get(`/container-statements/${containerNo}`);
     return response.data;
+  }
+
+  async downloadContainerStatementPDF(containerNo: string): Promise<void> {
+    // Use fetch to avoid Axios/XHR CORS preflight warnings and extension interception noise
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const requestUrl = `${base}/container-statements/${encodeURIComponent(containerNo)}/pdf`;
+    const resp = await fetch(requestUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+      }
+    });
+    if (!resp.ok) throw new Error(`Failed to fetch PDF (${resp.status})`);
+    const response = { data: await resp.blob() } as any;
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `container-statement-${containerNo}-${new Date().toISOString().split('T')[0]}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
   }
 
   async createContainerStatement(data: any): Promise<ApiResponse<any>> {

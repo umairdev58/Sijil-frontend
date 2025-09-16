@@ -162,6 +162,8 @@ const SaleDetails: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (isNewSale) {
+        const today = new Date().toISOString().split('T')[0];
+        const tenDaysLater = (() => { const d = new Date(); d.setDate(d.getDate() + 10); return d.toISOString().split('T')[0]; })();
         setSale({
           customer: '',
           supplier: '',
@@ -178,8 +180,8 @@ const SaleDetails: React.FC = () => {
           outstandingAmount: 0,
           status: 'unpaid',
           invoiceNumber: '',
-          invoiceDate: new Date().toISOString().split('T')[0],
-          dueDate: '',
+          invoiceDate: today,
+          dueDate: tenDaysLater,
           notes: ''
         });
         setLoading(false);
@@ -248,9 +250,25 @@ const SaleDetails: React.FC = () => {
     if (isFormMode) loadLookups();
   }, [isFormMode]);
 
+  const addDays = (dateString: string, days: number) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  };
+
   const handleInputChange = (field: string, value: any) => {
     setSale((prev: any) => {
-      const updatedSale = { ...prev, [field]: value };
+      let updatedSale: any = { ...prev, [field]: value };
+
+      // Auto-adjust due date when invoice date changes, unless user modified due date manually
+      if (field === 'invoiceDate') {
+        const newAutoDue = addDays(value, 10);
+        const prevAutoDue = addDays(prev.invoiceDate, 10);
+        if (!prev.dueDate || prev.dueDate === prevAutoDue) {
+          updatedSale.dueDate = newAutoDue;
+        }
+      }
 
       // Clear field error on change
       if (fieldErrors[field]) {

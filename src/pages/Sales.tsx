@@ -125,11 +125,8 @@ const SalesPage: React.FC = () => {
   // Debounced filters to prevent refetching on every keystroke
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
 
-  // Debounce search input updates to reduce API calls
-  useEffect(() => {
-    const t = setTimeout(() => setSearchQuery(searchInput.trim()), 300);
-    return () => clearTimeout(t);
-  }, [searchInput]);
+  // Remove auto-search on pause; search triggers only on Enter via onKeyDown
+  // (Intentionally no useEffect syncing searchInput -> searchQuery)
 
   // Date presets
   const applyLast7Days = () => {

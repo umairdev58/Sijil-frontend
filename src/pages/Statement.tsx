@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -58,9 +58,41 @@ const Statement: React.FC = () => {
     { _id: '5', description: 'PARKING', amount: 280.00 },
   ]);
 
-  // Calculate totals
-  const totalQuantity = products.reduce((sum, product) => sum + product.quantity, 0);
-  const grossSale = products.reduce((sum, product) => sum + product.amountWithoutVAT, 0);
+  // Group products by product + unitPrice (rate) and aggregate quantity and amount
+  const groupedProducts: ContainerStatementProduct[] = useMemo(() => {
+    const aggregateMap = new Map<string, { product: string; unitPrice: number; quantity: number; amountWithoutVAT: number }>();
+    products.forEach((p) => {
+      const key = `${p.product}__${p.unitPrice}`;
+      const existing = aggregateMap.get(key);
+      if (existing) {
+        existing.quantity += p.quantity;
+        existing.amountWithoutVAT += p.amountWithoutVAT;
+      } else {
+        aggregateMap.set(key, {
+          product: p.product,
+          unitPrice: p.unitPrice,
+          quantity: p.quantity,
+          amountWithoutVAT: p.amountWithoutVAT,
+        });
+      }
+    });
+
+    // Build array with sequential srNo
+    const rows: ContainerStatementProduct[] = Array.from(aggregateMap.values())
+      .sort((a, b) => a.unitPrice - b.unitPrice)
+      .map((item, index) => ({
+        srNo: index + 1,
+        product: item.product,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        amountWithoutVAT: item.amountWithoutVAT,
+      }));
+    return rows;
+  }, [products]);
+
+  // Calculate totals from grouped rows (same totals as original list)
+  const totalQuantity = groupedProducts.reduce((sum, product) => sum + product.quantity, 0);
+  const grossSale = groupedProducts.reduce((sum, product) => sum + product.amountWithoutVAT, 0);
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const netSale = grossSale - totalExpenses;
 
@@ -149,9 +181,24 @@ const Statement: React.FC = () => {
     window.print();
   };
 
-  const handleDownload = () => {
-    // TODO: Implement PDF download functionality
-    console.log('Download statement as PDF');
+  const handleDownload = async () => {
+    if (!statementData?.containerNo) return;
+    try {
+      await apiService.downloadContainerStatementPDF(statementData.containerNo);
+    } catch (e: any) {
+      // Some download managers/extensions intercept the request and cause a spurious
+      // network error in the console while the file still downloads successfully.
+      // We suppress the UI error for this specific case.
+      const code = e?.code || e?.response?.status;
+      const msg = String(e?.message || '');
+      const intercepted = msg.includes('ERR_FAILED') || msg.includes('Network Error');
+      if (!intercepted) {
+        console.error(e);
+        setError('Failed to download statement PDF');
+      } else {
+        console.warn('Download intercepted by a browser extension; suppressing UI error.');
+      }
+    }
   };
 
   return (
@@ -244,7 +291,7 @@ const Statement: React.FC = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {products.map((product) => (
+                      {groupedProducts.map((product) => (
                         <TableRow key={product.srNo}>
                           <TableCell>{product.srNo}</TableCell>
                           <TableCell>{product.product}</TableCell>
