@@ -51,6 +51,25 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
+  // Persist read state across reloads
+  const READ_IDS_STORAGE_KEY = 'readNotificationIds';
+  const [readIds, setReadIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem(READ_IDS_STORAGE_KEY);
+      if (!stored) return new Set<string>();
+      const arr = JSON.parse(stored) as string[];
+      return new Set<string>(Array.isArray(arr) ? arr : []);
+    } catch {
+      return new Set<string>();
+    }
+  });
+
+  const persistReadIds = (ids: Set<string>) => {
+    try {
+      localStorage.setItem(READ_IDS_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+    } catch {}
+  };
+
   const unreadCount = notifications.filter(n => !n.read).length;
 
   // Generate dynamic notifications based on business data
@@ -184,8 +203,31 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       
       if (partiallyPaidResponse.success && partiallyPaidResponse.data && partiallyPaidResponse.data.length > 0) {
         partiallyPaidResponse.data.forEach((sale: any) => {
-          const daysUntilDue = Math.ceil((new Date(sale.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-          
+          const msDiff = new Date(sale.dueDate).getTime() - new Date().getTime();
+          const daysUntilDue = Math.ceil(msDiff / (1000 * 60 * 60 * 24));
+
+          // Overdue partial payments
+          if (daysUntilDue < 0) {
+            const overdueDays = Math.abs(daysUntilDue);
+            newNotifications.push({
+              id: `partial-payment-overdue-${sale._id}`,
+              type: 'error',
+              title: 'Partial Payment Overdue',
+              message: `${sale.invoiceNumber} - AED ${sale.outstandingAmount.toLocaleString()} outstanding (Overdue by ${overdueDays} day${overdueDays > 1 ? 's' : ''})`,
+              timestamp: new Date(),
+              read: false,
+              actionUrl: `/sales/${sale._id}`,
+              actionText: 'View Invoice',
+              metadata: {
+                saleId: sale._id,
+                amount: sale.outstandingAmount,
+                invoiceNumber: sale.invoiceNumber
+              }
+            });
+            return;
+          }
+
+          // Due soon (within next 3 days)
           if (daysUntilDue <= 3) {
             newNotifications.push({
               id: `partial-payment-${sale._id}`,
@@ -233,6 +275,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         });
       }
 
+      // Apply persisted read state
+      for (const n of newNotifications) {
+        if (readIds.has(n.id)) {
+          n.read = true;
+        }
+      }
+
       // Sort notifications by timestamp (newest first)
       newNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
@@ -242,7 +291,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         // Merge with existing notifications, avoiding duplicates
         const existingIds = new Set(prev.map(n => n.id));
         const uniqueNewNotifications = newNotifications.filter(n => !existingIds.has(n.id));
-        const finalNotifications = [...uniqueNewNotifications, ...prev].slice(0, 50); // Keep only last 50 notifications
+        // When merging, ensure read state is respected from persisted IDs
+        const merged = [...uniqueNewNotifications, ...prev].slice(0, 50).map(n => ({
+          ...n,
+          read: n.read || readIds.has(n.id)
+        }));
+        const finalNotifications = merged;
         
         console.log(`📋 Total notifications after merge: ${finalNotifications.length}`);
         return finalNotifications;
@@ -262,25 +316,36 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   // Mark notification as read
   const markAsRead = useCallback((id: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setReadIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      persistReadIds(next);
+      return next;
+    });
   }, []);
 
   // Mark all notifications as read
   const markAllAsRead = useCallback(() => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
-  }, []);
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setReadIds(prev => {
+      const next = new Set(prev);
+      notifications.forEach(n => next.add(n.id));
+      persistReadIds(next);
+      return next;
+    });
+  }, [notifications]);
 
   // Remove notification
   const removeNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
+    // Optionally persist as read so it doesn't reappear immediately upon regeneration
+    setReadIds(prev => {
+      const next = new Set(prev);
+      next.add(id);
+      persistReadIds(next);
+      return next;
+    });
   }, []);
 
   // Clear all notifications

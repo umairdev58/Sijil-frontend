@@ -351,11 +351,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             : 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h6" sx={{ 
-              fontWeight: 700, 
-              color: mode === 'dark' ? '#a5b4fc' : '#8b5cf6',
-              fontSize: '1.1rem',
-            }}>
+            <Typography 
+              variant="h6" 
+              onClick={() => { navigate('/notifications'); handleNotificationMenuClose(); }}
+              sx={{ 
+                fontWeight: 700, 
+                color: mode === 'dark' ? '#a5b4fc' : '#8b5cf6',
+                fontSize: '1.1rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                '&:hover': {
+                  textDecoration: 'underline'
+                }
+              }}
+            >
               Notifications
             </Typography>
             {unreadCount > 0 && (
