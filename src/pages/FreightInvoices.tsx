@@ -73,6 +73,8 @@ import apiService from '../services/api';
 import { FreightInvoice, FreightPayment } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
+import ColumnToggle, { ColumnConfig } from '../components/ColumnToggle';
+import { useColumnToggle } from '../hooks/useColumnToggle';
 
 const FreightInvoices: React.FC = () => {
   const theme = useTheme();
@@ -122,6 +124,36 @@ const FreightInvoices: React.FC = () => {
   const [reportFormat, setReportFormat] = useState<'pdf' | 'csv'>('pdf');
   const [reportGroupBy, setReportGroupBy] = useState<'none' | 'agent' | 'status' | 'month'>('none');
   const [includePayments, setIncludePayments] = useState(true);
+
+  // Column configuration for table
+  const defaultColumns: ColumnConfig[] = [
+    { id: 'invoiceNumber', label: 'Invoice Number', visible: true, order: 1, required: true },
+    { id: 'agent', label: 'Agent', visible: true, order: 2, required: true },
+    { id: 'customer', label: 'Customer', visible: true, order: 3, required: true },
+    { id: 'containerNo', label: 'Container No', visible: true, order: 4 },
+    { id: 'vessel', label: 'Vessel', visible: false, order: 5 },
+    { id: 'voyage', label: 'Voyage', visible: false, order: 6 },
+    { id: 'port', label: 'Port', visible: false, order: 7 },
+    { id: 'amount', label: 'Amount', visible: true, order: 8, required: true },
+    { id: 'receivedAmount', label: 'Received', visible: true, order: 9 },
+    { id: 'outstandingAmount', label: 'Outstanding', visible: true, order: 10, required: true },
+    { id: 'status', label: 'Status', visible: true, order: 11, required: true },
+    { id: 'dueDate', label: 'Due Date', visible: false, order: 12 },
+    { id: 'actions', label: 'Actions', visible: true, order: 13, required: true },
+  ];
+
+  const {
+    columns,
+    visibleColumns,
+    toggleColumn,
+    selectAllColumns,
+    selectNoneColumns,
+    resetToDefault,
+  } = useColumnToggle({
+    defaultColumns,
+    storageKey: 'freight-invoices-table-columns',
+    requiredColumns: ['invoiceNumber', 'agent', 'customer', 'amount', 'outstandingAmount', 'status', 'actions'],
+  });
 
   // Auto-search with debouncing
   useEffect(() => {

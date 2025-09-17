@@ -448,6 +448,21 @@ class ApiService {
     return response.data;
   }
 
+  // Get recent payments
+  async getRecentPayments(params: { limit?: number; days?: number } = {}): Promise<ApiResponse<Payment[]>> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.days) queryParams.append('days', params.days.toString());
+      
+      const response = await this.api.get(`/sales/payments/recent?${queryParams.toString()}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching recent payments:', error);
+      throw error;
+    }
+  }
+
   async getMonthlyStatistics(month?: string, year?: string): Promise<ApiResponse<any>> {
     const params = new URLSearchParams();
     if (month) params.append('month', month);

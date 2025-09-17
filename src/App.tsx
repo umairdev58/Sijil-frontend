@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { LoadingProvider } from './contexts/LoadingContext';
 import { SidebarProvider } from './contexts/SidebarContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { AppLayout } from './components/Layout/AppLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -38,6 +39,7 @@ import DubaiClearanceInvoices from './pages/DubaiClearanceInvoices';
 import DubaiClearanceInvoiceForm from './pages/DubaiClearanceInvoiceForm';
 import DubaiClearanceDetails from './pages/DubaiClearanceDetails';
 import Statement from './pages/Statement';
+import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -428,6 +430,17 @@ const AppContent: React.FC = () => {
             </PrivateRoute>
           }
         />
+        {/* Notifications Route */}
+        <Route
+          path="/notifications"
+          element={
+            <PrivateRoute>
+              <AppLayout>
+                <Notifications />
+              </AppLayout>
+            </PrivateRoute>
+          }
+        />
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
     </Router>
@@ -442,7 +455,9 @@ const App: React.FC = () => {
         <AuthProvider>
           <LoadingProvider>
             <SidebarProvider>
-              <AppContent />
+              <NotificationProvider>
+                <AppContent />
+              </NotificationProvider>
             </SidebarProvider>
           </LoadingProvider>
         </AuthProvider>

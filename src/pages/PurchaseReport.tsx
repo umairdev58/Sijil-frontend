@@ -44,6 +44,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import apiService from '../services/api';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface PurchaseReportData {
   summary: {
@@ -63,6 +64,7 @@ interface PurchaseReportData {
 }
 
 const PurchaseReportPage: React.FC = () => {
+  const { mode } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reportData, setReportData] = useState<PurchaseReportData | null>(null);
@@ -153,12 +155,16 @@ const PurchaseReportPage: React.FC = () => {
   const chartData = prepareChartData();
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ 
+      p: 3,
+      minHeight: '100vh',
+      bgcolor: mode === 'dark' ? 'rgba(15,23,42,0.3)' : 'background.default',
+    }}>
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <ReportIcon sx={{ fontSize: 32, color: '#3ca12c' }} />
-          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#2d3748' }}>
+          <ReportIcon sx={{ fontSize: 32, color: mode === 'dark' ? '#60a5fa' : '#3ca12c' }} />
+          <Typography variant="h4" sx={{ fontWeight: 'bold', color: mode === 'dark' ? '#60a5fa' : '#2d3748' }}>
             Purchase Report
           </Typography>
         </Box>
@@ -307,7 +313,15 @@ const PurchaseReportPage: React.FC = () => {
         <>
           {/* Summary Cards */}
           <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
-            <Card sx={{ borderRadius: 2, bgcolor: '#4299e1', color: 'white', minWidth: 200, flex: 1 }}>
+            <Card sx={{ 
+              borderRadius: 2, 
+              bgcolor: mode === 'dark' ? 'rgba(59,130,246,0.8)' : '#4299e1', 
+              color: 'white', 
+              minWidth: 200, 
+              flex: 1,
+              boxShadow: mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.08)',
+              border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : 'none',
+            }}>
               <CardContent>
                 <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
                   {reportData.summary.totalPurchases}
@@ -315,7 +329,15 @@ const PurchaseReportPage: React.FC = () => {
                 <Typography variant="body2">Total Purchases</Typography>
               </CardContent>
             </Card>
-            <Card sx={{ borderRadius: 2, bgcolor: '#48bb78', color: 'white', minWidth: 200, flex: 1 }}>
+            <Card sx={{ 
+              borderRadius: 2, 
+              bgcolor: mode === 'dark' ? 'rgba(34,197,94,0.8)' : '#48bb78', 
+              color: 'white', 
+              minWidth: 200, 
+              flex: 1,
+              boxShadow: mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.08)',
+              border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : 'none',
+            }}>
               <CardContent>
                 <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
                   PKR {reportData.summary.totalPKR.toLocaleString()}
@@ -323,7 +345,15 @@ const PurchaseReportPage: React.FC = () => {
                 <Typography variant="body2">Total PKR</Typography>
               </CardContent>
             </Card>
-            <Card sx={{ borderRadius: 2, bgcolor: '#ed8936', color: 'white', minWidth: 200, flex: 1 }}>
+            <Card sx={{ 
+              borderRadius: 2, 
+              bgcolor: mode === 'dark' ? 'rgba(249,115,22,0.8)' : '#ed8936', 
+              color: 'white', 
+              minWidth: 200, 
+              flex: 1,
+              boxShadow: mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.08)',
+              border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : 'none',
+            }}>
               <CardContent>
                 <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
                   AED {reportData.summary.totalAED.toLocaleString()}
@@ -331,7 +361,15 @@ const PurchaseReportPage: React.FC = () => {
                 <Typography variant="body2">Total AED</Typography>
               </CardContent>
             </Card>
-            <Card sx={{ borderRadius: 2, bgcolor: '#f56565', color: 'white', minWidth: 200, flex: 1 }}>
+            <Card sx={{ 
+              borderRadius: 2, 
+              bgcolor: mode === 'dark' ? 'rgba(239,68,68,0.8)' : '#f56565', 
+              color: 'white', 
+              minWidth: 200, 
+              flex: 1,
+              boxShadow: mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.08)',
+              border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : 'none',
+            }}>
               <CardContent>
                 <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
                   AED {reportData.summary.averageCost.toLocaleString()}
@@ -342,12 +380,31 @@ const PurchaseReportPage: React.FC = () => {
           </Box>
 
           {/* Tabs */}
-          <Paper sx={{ borderRadius: 2 }}>
-            <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+          <Paper sx={{ 
+            borderRadius: 2,
+            bgcolor: mode === 'dark' ? 'rgba(30,41,59,0.8)' : 'background.paper',
+            border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : 'none',
+            boxShadow: mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.08)',
+          }}>
+            <Tabs 
+              value={activeTab} 
+              onChange={(e, newValue) => setActiveTab(newValue)}
+              sx={{
+                '& .MuiTab-root': {
+                  color: mode === 'dark' ? 'rgba(241,245,249,0.7)' : 'inherit',
+                  '&.Mui-selected': {
+                    color: mode === 'dark' ? '#60a5fa' : 'primary.main',
+                  },
+                },
+                '& .MuiTabs-indicator': {
+                  backgroundColor: mode === 'dark' ? '#60a5fa' : 'primary.main',
+                },
+              }}
+            >
               <Tab icon={<TableIcon />} label="Table View" />
               <Tab icon={<BarChartIcon />} label="Charts" />
             </Tabs>
-            <Divider />
+            <Divider sx={{ borderColor: mode === 'dark' ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.12)' }} />
 
             {/* Table View */}
             {activeTab === 0 && (

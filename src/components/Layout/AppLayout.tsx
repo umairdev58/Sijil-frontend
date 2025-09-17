@@ -3,13 +3,7 @@ import {
   AppBar,
   Box,
   CssBaseline,
-  Drawer,
   IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Toolbar,
   Typography,
   Avatar,
@@ -18,12 +12,8 @@ import {
   Divider,
   Badge,
   Chip,
-  Collapse,
-  TextField,
-  InputAdornment,
   Tooltip,
-  Fade,
-  Slide,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -31,108 +21,50 @@ import {
   Settings,
   Logout,
   Notifications,
-  ExpandMore,
-  ExpandLess,
   ChevronLeft,
   ChevronRight,
 } from '@mui/icons-material';
+import { Receipt as ReceiptIcon, Users } from 'lucide-react';
 import ThemeToggle from '../ThemeToggle';
-import { LayoutDashboard, Users, Building2, User as UserIcon, Receipt as ReceiptIcon, Boxes, BarChart3, Plus, ShoppingCart as CartIcon, ShoppingBag, BookOpen, Truck, Ship, FileText } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSidebar } from '../../contexts/SidebarContext';
-import { useSidebarScrollbar } from '../../hooks/useSidebarScrollbar';
-import logo from '../../assets/Sijil.jpg';
-
-const drawerWidth = 280;
-const collapsedDrawerWidth = 70;
+import { useNotifications } from '../../contexts/NotificationContext';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-const menuItems = [
-  { text: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard' },
-  { text: 'Executive Dashboard', icon: <BarChart3 size={20} />, path: '/executive-dashboard' },
-  { text: 'Customers', icon: <Users size={20} />, path: '/customers' },
-  { text: 'Suppliers', icon: <Building2 size={20} />, path: '/suppliers' },
-  { text: 'Users', icon: <UserIcon size={20} />, path: '/users' },
-  { text: 'Daily Ledger', icon: <BookOpen size={20} />, path: '/daily-ledger' },
-  { text: 'Statement', icon: <FileText size={20} />, path: '/statement' },
-];
-
-const salesItems = [
-  { text: 'All Sales', path: '/sales', icon: <ReceiptIcon size={18} /> },
-  { text: 'New Sale', path: '/sales/new', icon: <Plus size={18} /> },
-  { text: 'Sales Report', path: '/sales-report', icon: <BarChart3 size={18} /> },
-  { text: 'Customer Outstanding', path: '/customer-outstanding', icon: <ReceiptIcon size={18} />, badge: 5 },
-];
-
-const purchaseItems = [
-  { text: 'All Purchases', path: '/purchases', icon: <Boxes size={18} /> },
-  { text: 'New Purchase', path: '/purchases/new', icon: <Plus size={18} /> },
-  { text: 'Purchase Report', path: '/purchase-report', icon: <BarChart3 size={18} /> },
-];
-
-const freightItems = [
-  { text: 'All Freight Invoices', path: '/freight-invoices', icon: <Ship size={18} /> },
-  { text: 'New Freight Invoice', path: '/freight-invoices/new', icon: <Plus size={18} /> },
-];
-
-const transportItems = [
-  { text: 'All Transport Invoices', path: '/transport-invoices', icon: <Truck size={18} /> },
-  { text: 'New Transport Invoice', path: '/transport-invoices/new', icon: <Plus size={18} /> },
-];
-
-const dubaiTransportItems = [
-  { text: 'All Dubai Transport Invoices', path: '/dubai-transport-invoices', icon: <Truck size={18} /> },
-  { text: 'New Dubai Transport Invoice', path: '/dubai-transport-invoices/new', icon: <Plus size={18} /> },
-];
-
-const dubaiClearanceItems = [
-  { text: 'All Dubai Clearance Invoices', path: '/dubai-clearance-invoices', icon: <Ship size={18} /> },
-  { text: 'New Dubai Clearance Invoice', path: '/dubai-clearance-invoices/new', icon: <Plus size={18} /> },
-];
-
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
-  
-  // Use the sidebar scrollbar hook to manage scrollbar visibility
-  useSidebarScrollbar();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
-  const [salesPopupAnchor, setSalesPopupAnchor] = useState<null | HTMLElement>(null);
-  const [purchasesPopupAnchor, setPurchasesPopupAnchor] = useState<null | HTMLElement>(null);
-  const [freightPopupAnchor, setFreightPopupAnchor] = useState<null | HTMLElement>(null);
-  const [transportPopupAnchor, setTransportPopupAnchor] = useState<null | HTMLElement>(null);
-  const [dubaiTransportPopupAnchor, setDubaiTransportPopupAnchor] = useState<null | HTMLElement>(null);
-  const [dubaiClearancePopupAnchor, setDubaiClearancePopupAnchor] = useState<null | HTMLElement>(null);
   const { user, logout } = useAuth();
   const { mode } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [openSales, setOpenSales] = useState(location.pathname.startsWith('/sales'));
-  const [openPurchases, setOpenPurchases] = useState(location.pathname.startsWith('/purchases'));
-  const [openFreight, setOpenFreight] = useState(location.pathname.startsWith('/freight-invoices'));
-  const [openTransport, setOpenTransport] = useState(location.pathname.startsWith('/transport-invoices'));
-  const [openDubaiTransport, setOpenDubaiTransport] = useState(location.pathname.startsWith('/dubai-transport-invoices'));
-  const [openDubaiClearance, setOpenDubaiClearance] = useState(location.pathname.startsWith('/dubai-clearance-invoices'));
+  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, refreshNotifications } = useNotifications();
 
   const currentTitle = useMemo(() => {
-    if (location.pathname === '/customer-outstanding') return 'Customer Outstanding';
-    if (location.pathname === '/daily-ledger') return 'Daily Ledger';
-    if (location.pathname === '/executive-dashboard') return 'Executive Dashboard';
-    if (location.pathname.startsWith('/sales')) return 'Sales';
-    if (location.pathname.startsWith('/purchases')) return 'Purchase';
-    if (location.pathname.startsWith('/freight-invoices')) return 'Freight';
-    if (location.pathname.startsWith('/transport-invoices')) return 'Transport';
-    if (location.pathname.startsWith('/dubai-transport-invoices')) return 'Dubai Transport';
-    if (location.pathname.startsWith('/dubai-clearance-invoices')) return 'Dubai Clearance';
-    const found = menuItems.find(item => item.path === location.pathname);
-    return found?.text || 'Dashboard';
-  }, [location.pathname]);
+    const path = window.location.pathname;
+    if (path === '/customer-outstanding') return 'Customer Outstanding';
+    if (path === '/daily-ledger') return 'Daily Ledger';
+    if (path === '/executive-dashboard') return 'Executive Dashboard';
+    if (path.startsWith('/sales')) return 'Sales';
+    if (path.startsWith('/purchases')) return 'Purchase';
+    if (path.startsWith('/freight-invoices')) return 'Freight';
+    if (path.startsWith('/transport-invoices')) return 'Transport';
+    if (path.startsWith('/dubai-transport-invoices')) return 'Dubai Transport';
+    if (path.startsWith('/dubai-clearance-invoices')) return 'Dubai Clearance';
+    if (path === '/dashboard') return 'Dashboard';
+    if (path === '/customers') return 'Customers';
+    if (path === '/suppliers') return 'Suppliers';
+    if (path === '/users') return 'Users';
+    if (path === '/statement') return 'Statement';
+    return 'Dashboard';
+  }, []);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -158,1700 +90,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     setNotificationAnchorEl(null);
   };
 
-  const handleSalesPopupOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (sidebarCollapsed) {
-      setSalesPopupAnchor(event.currentTarget);
-    } else {
-      setOpenSales(!openSales);
-    }
-  };
-
-  const handleSalesPopupClose = () => {
-    setSalesPopupAnchor(null);
-  };
-
-  const handlePurchasesPopupOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (sidebarCollapsed) {
-      setPurchasesPopupAnchor(event.currentTarget);
-    } else {
-      setOpenPurchases(!openPurchases);
-    }
-  };
-
-  const handlePurchasesPopupClose = () => {
-    setPurchasesPopupAnchor(null);
-  };
-
-  const handleFreightPopupOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (sidebarCollapsed) {
-      setFreightPopupAnchor(event.currentTarget);
-    } else {
-      setOpenFreight(!openFreight);
-    }
-  };
-
-  const handleFreightPopupClose = () => {
-    setFreightPopupAnchor(null);
-  };
-
-  const handleTransportPopupOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (sidebarCollapsed) {
-      setTransportPopupAnchor(event.currentTarget);
-    } else {
-      setOpenTransport(!openTransport);
-    }
-  };
-
-  const handleTransportPopupClose = () => {
-    setTransportPopupAnchor(null);
-  };
-
-  const handleDubaiTransportPopupOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (sidebarCollapsed) {
-      setDubaiTransportPopupAnchor(event.currentTarget);
-    } else {
-      setOpenDubaiTransport(!openDubaiTransport);
-    }
-  };
-
-  const handleDubaiTransportPopupClose = () => {
-    setDubaiTransportPopupAnchor(null);
-  };
-
-  const handleDubaiClearancePopupOpen = (event: React.MouseEvent<HTMLElement>) => {
-    if (sidebarCollapsed) {
-      setDubaiClearancePopupAnchor(event.currentTarget);
-    } else {
-      setOpenDubaiClearance(!openDubaiClearance);
-    }
-  };
-
-  const handleDubaiClearancePopupClose = () => {
-    setDubaiClearancePopupAnchor(null);
-  };
-
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
-
-  const isSelected = (path: string) => location.pathname === path;
-
-  const drawer = (
-      <Box sx={{ 
-      height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'column',
-      overflow: 'hidden',
-      background: mode === 'dark' 
-        ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)'
-        : 'linear-gradient(135deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.98) 100%)',
-      backdropFilter: 'blur(20px)',
-              borderRight: mode === 'dark' 
-          ? '1px solid rgba(255, 255, 255, 0.1)' 
-          : '1px solid rgba(0, 0, 0, 0.1)',
-        position: 'relative',
-      }}>
-      {/* Glass overlay effect */}
-        <Box sx={{ 
-          position: 'absolute', 
-          top: 0, 
-        left: 0,
-          right: 0, 
-        bottom: 0,
-        background: 'rgba(255, 255, 255, 0.05)',
-        pointerEvents: 'none',
-      }} />
-
-      {/* Sidebar Header */}
-      <Box sx={{ 
-        p: 1, 
-        position: 'relative',
-        overflow: 'hidden',
-        flexShrink: 0,
-        borderBottom: mode === 'dark' 
-          ? '1px solid rgba(255, 255, 255, 0.1)' 
-          : '1px solid rgba(0, 0, 0, 0.1)',
-      }}>
-        <Box sx={{ 
-          position: 'absolute', 
-          top: -50, 
-          right: -50, 
-          width: 100, 
-          height: 100, 
-          background: mode === 'dark' 
-            ? 'rgba(168, 85, 247, 0.15)' 
-            : 'rgba(139, 92, 246, 0.1)', 
-          borderRadius: '50%', 
-          filter: 'blur(20px)',
-        }} />
-        <Box sx={{ 
-          position: 'absolute', 
-          bottom: -30, 
-          left: -30, 
-          width: 60, 
-          height: 60, 
-          background: mode === 'dark' 
-            ? 'rgba(59, 130, 246, 0.15)' 
-            : 'rgba(99, 102, 241, 0.1)', 
-          borderRadius: '50%', 
-          filter: 'blur(15px)',
-        }} />
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, position: 'relative', zIndex: 1 }}>
-          <Box sx={{ 
-            width: 48, 
-            height: 48, 
-            borderRadius: 3, 
-            overflow: 'hidden',
-            boxShadow: mode === 'dark' 
-              ? '0 8px 32px rgba(0,0,0,0.3)' 
-              : '0 8px 32px rgba(0,0,0,0.1)',
-            border: mode === 'dark' 
-              ? '2px solid rgba(168, 85, 247, 0.3)' 
-              : '2px solid rgba(139, 92, 246, 0.2)',
-            background: mode === 'dark' 
-              ? 'rgba(255, 255, 255, 0.1)' 
-              : 'rgba(255, 255, 255, 0.8)',
-            backdropFilter: 'blur(10px)',
-          }}>
-            <img 
-              src={logo} 
-              alt="Sijil Logo" 
-              style={{ 
-                width: '100%', 
-                height: '100%', 
-                objectFit: 'cover' 
-              }} 
-            />
-          </Box>
-          {!sidebarCollapsed && (
-            <Fade in={!sidebarCollapsed} timeout={300}>
-          <Box>
-                <Typography variant="h5" sx={{ 
-                  fontWeight: 800, 
-                  letterSpacing: 0.5,
-                  color: mode === 'dark' ? '#ffffff' : '#1e293b',
-                  textShadow: mode === 'dark' 
-                    ? '0 2px 4px rgba(0,0,0,0.3)' 
-                    : '0 1px 2px rgba(0,0,0,0.1)',
-                }}>
-              Sijil
-            </Typography>
-                <Typography variant="caption" sx={{ 
-                  opacity: 0.9, 
-                  letterSpacing: 0.5,
-                  color: mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.8)' 
-                    : 'rgba(30, 41, 59, 0.7)',
-                }}>
-              Accounting System
-            </Typography>
-          </Box>
-            </Fade>
-          )}
-        </Box>
-      </Box>
-
-      {/* Navigation Menu */}
-      <Box sx={{ 
-        flex: 1, 
-        p: 2, 
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-        zIndex: 1,
-      }}>
-        {!sidebarCollapsed && (
-          <Fade in={!sidebarCollapsed} timeout={300}>
-            <Typography variant="overline" sx={{ 
-              px: 2, 
-              py: 1, 
-              color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(30, 41, 59, 0.8)', 
-              fontWeight: 600, 
-              letterSpacing: 1, 
-              flexShrink: 0,
-              textShadow: mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-            }}>
-          Navigation
-        </Typography>
-          </Fade>
-        )}
-        
-        <List sx={{ 
-          mt: 1, 
-          flex: 1,
-          overflow: 'auto',
-          '&::-webkit-scrollbar': {
-            width: '4px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: 'transparent',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: 'rgba(168, 85, 247, 0.3)',
-            borderRadius: '2px',
-          },
-          '&::-webkit-scrollbar-thumb:hover': {
-            background: 'rgba(168, 85, 247, 0.5)',
-          },
-        }}>
-          {/* Main Menu Items */}
-          {menuItems.map((item) => {
-            const selected = isSelected(item.path);
-            return (
-              <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
-                <Tooltip 
-                  title={sidebarCollapsed ? item.text : ''} 
-                  placement="right"
-                  arrow
-                >
-                <Box>
-                <ListItemButton
-                  selected={selected}
-                  onClick={() => {
-                    navigate(item.path);
-                    setMobileOpen(false);
-                  }}
-                  sx={{
-                    borderRadius: 2,
-                    mx: 0.5,
-                    py: 2,
-                      px: sidebarCollapsed ? 1 : 3,
-                      minHeight: 44,
-                    transition: 'all 0.2s ease',
-                    background: selected 
-                        ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') 
-                      : 'transparent',
-                      color: selected 
-                        ? '#ffffff' 
-                        : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                    fontWeight: selected ? 600 : 500,
-                      border: '1px solid transparent',
-                    '&:hover': {
-                        background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ 
-                    color: 'inherit', 
-                    minWidth: sidebarCollapsed ? 32 : 40,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-start',
-                    '& .MuiSvgIcon-root, & svg': { fontSize: 20 }
-                  }}>
-                    {item.icon}
-                  </ListItemIcon>
-                    {!sidebarCollapsed && (
-                      <Fade in={!sidebarCollapsed} timeout={150}>
-                  <ListItemText 
-                    primary={item.text} 
-                    sx={{ 
-                      '.MuiTypography-root': { 
-                        fontWeight: selected ? 600 : 500, 
-                        fontSize: 14 
-                      } 
-                    }} 
-                  />
-                      </Fade>
-                    )}
-                </ListItemButton>
-                </Box>
-                </Tooltip>
-              </ListItem>
-            );
-          })}
-
-          {/* Sales Section */}
-          {!sidebarCollapsed && (
-            <Fade in={!sidebarCollapsed} timeout={300}>
-                          <Typography variant="overline" sx={{ 
-              px: 3, 
-              py: 0.5, 
-              mt: 1,
-              color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(30, 41, 59, 0.8)', 
-              fontWeight: 600, 
-              letterSpacing: 1,
-              textShadow: mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-            }}>
-              Sales
-            </Typography>
-            </Fade>
-          )}
-          
-          <ListItem disablePadding sx={{ mb: 0.5 }}>
-            <Tooltip 
-              title={sidebarCollapsed ? 'Sales' : ''} 
-              placement="right"
-              arrow
-            >
-            <Box>
-            <ListItemButton
-              onClick={handleSalesPopupOpen}
-              sx={{
-                borderRadius: 2,
-                mx: 0.5,
-                py: 2,
-                  px: sidebarCollapsed ? 1 : 3,
-                  minHeight: 44,
-                  transition: 'all 0.2s ease',
-                  background: openSales 
-                    ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') 
-                    : 'transparent',
-                  color: openSales 
-                    ? '#ffffff' 
-                    : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                  fontWeight: openSales ? 600 : 500,
-                  border: '1px solid transparent',
-                  '&:hover': {
-                    background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ 
-                  color: 'inherit', 
-                  minWidth: sidebarCollapsed ? 32 : 40,
-                  display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                  '& .MuiSvgIcon-root, & svg': { fontSize: 20 }
-                }}>
-                <CartIcon size={20} />
-              </ListItemIcon>
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-              <ListItemText primary="Sales" />
-                  </Fade>
-                )}
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-              {openSales ? <ExpandLess /> : <ExpandMore />}
-                  </Fade>
-                )}
-            </ListItemButton>
-            </Box>
-            </Tooltip>
-          </ListItem>
-          
-          {/* Sales Popup Menu for Collapsed Sidebar */}
-          <Menu
-            anchorEl={salesPopupAnchor}
-            open={Boolean(salesPopupAnchor)}
-            onClose={handleSalesPopupClose}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                ml: 1,
-                minWidth: 200,
-                background: mode === 'dark' 
-                  ? 'rgba(15, 23, 42, 0.98)' 
-                  : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                border: mode === 'dark' 
-                  ? '1px solid rgba(255, 255, 255, 0.15)' 
-                  : '1px solid rgba(0, 0, 0, 0.1)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                borderRadius: 2,
-                '& .MuiMenuItem-root': {
-                  borderRadius: 2,
-                  mx: 1,
-                  my: 0.5,
-                  color: mode === 'dark' 
-                    ? 'rgba(241, 245, 249, 0.9)' 
-                    : 'rgba(30, 41, 59, 0.9)',
-                  '&:hover': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.6)' 
-                      : 'rgba(229, 231, 235, 0.6)',
-                    color: mode === 'dark' ? '#ffffff' : '#1e293b',
-                  },
-                  '&.Mui-selected': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.9)' 
-                      : 'rgba(229, 231, 235, 0.9)',
-                    color: '#ffffff',
-                  },
-                },
-              },
-            }}
-          >
-            {salesItems.map((item) => {
-              const selected = isSelected(item.path);
-              return (
-                <MenuItem
-                  key={item.text}
-                  selected={selected}
-                  onClick={() => {
-                    navigate(item.path);
-                    handleSalesPopupClose();
-                    setMobileOpen(false);
-                  }}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    py: 1.5,
-                    px: 2,
-                  }}
-                >
-                  <Box sx={{ 
-                    color: 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}>
-                    {item.icon}
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500 }}>
-                      {item.text}
-                    </Typography>
-                  </Box>
-                  {item.badge && (
-                    <Badge 
-                      badgeContent={item.badge} 
-                      color="error" 
-                      sx={{ 
-                        '& .MuiBadge-badge': {
-                          fontSize: '0.7rem',
-                          height: 18,
-                          minWidth: 18,
-                        }
-                      }}
-                    />
-                  )}
-                </MenuItem>
-              );
-            })}
-          </Menu>
-          
-          <Collapse in={openSales && !sidebarCollapsed} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding sx={{ 
-              '& .MuiListItem-root': { 
-                padding: 0,
-                margin: '1px 0'
-              },
-              '& .MuiListItemButton-root': {
-                paddingLeft: 6,
-                paddingY: 1.5,
-                marginX: 0.5,
-                borderRadius: 2,
-                background: 'transparent',
-                border: '1px solid transparent',
-                '&:hover': {
-                  background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                }
-              }
-            }}>
-              {salesItems.map((sub) => {
-                const selected = isSelected(sub.path);
-                return (
-                  <ListItem key={sub.text} disablePadding>
-                    <ListItemButton
-                      selected={selected}
-                      onClick={() => {
-                        navigate(sub.path);
-                        setMobileOpen(false);
-                      }}
-                      sx={{ 
-                        pl: 6, 
-                        py: 1.5, 
-                        mx: 0.5, 
-                        borderRadius: 2,
-                        color: selected 
-                          ? '#ffffff' 
-                          : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                        background: selected ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') : 'transparent',
-                        border: '1px solid transparent',
-                        '&:hover': {
-                          background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                        }
-                      }}
-                    >
-                      <ListItemIcon sx={{ 
-                        color: 'inherit', 
-                        minWidth: 32,
-                        '& .MuiSvgIcon-root': { fontSize: 18 }
-                      }}>
-                        {sub.icon}
-                      </ListItemIcon>
-                      <ListItemText primary={sub.text} />
-                      {sub.badge && (
-                        <Badge 
-                          badgeContent={sub.badge} 
-                          color="error" 
-                          sx={{ 
-                            '& .MuiBadge-badge': {
-                              fontSize: '0.7rem',
-                              height: 18,
-                              minWidth: 18,
-                            }
-                          }}
-                        />
-                      )}
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-            </List>
-          </Collapse>
-
-          {/* Purchases Section */}
-          {!sidebarCollapsed && (
-            <Fade in={!sidebarCollapsed} timeout={300}>
-                          <Typography variant="overline" sx={{ 
-              px: 3, 
-              py: 0.5, 
-              mt: 1,
-              color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(30, 41, 59, 0.8)', 
-              fontWeight: 600, 
-              letterSpacing: 1,
-              textShadow: mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-            }}>
-              Purchases
-            </Typography>
-            </Fade>
-          )}
-          
-          <ListItem disablePadding sx={{ mb: 0.5, mt: 0.5 }}>
-            <Tooltip 
-              title={sidebarCollapsed ? 'Purchases' : ''} 
-              placement="right"
-              arrow
-            >
-            <Box>
-            <ListItemButton
-              onClick={handlePurchasesPopupOpen}
-              sx={{
-                borderRadius: 2,
-                mx: 0.5,
-                py: 2,
-                  px: sidebarCollapsed ? 1 : 3,
-                  minHeight: 44,
-                  transition: 'all 0.2s ease',
-                  background: openPurchases 
-                    ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') 
-                    : 'transparent',
-                  color: openPurchases 
-                    ? '#ffffff' 
-                    : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                  fontWeight: openPurchases ? 600 : 500,
-                  border: '1px solid transparent',
-                  '&:hover': {
-                    background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ 
-                  color: 'inherit', 
-                  minWidth: sidebarCollapsed ? 32 : 40,
-                  display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                  '& .MuiSvgIcon-root, & svg': { fontSize: 20 }
-                }}>
-                <ShoppingBag size={20} />
-              </ListItemIcon>
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-                    <ListItemText primary="Purchases" />
-                  </Fade>
-                )}
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-              {openPurchases ? <ExpandLess /> : <ExpandMore />}
-                  </Fade>
-                )}
-            </ListItemButton>
-            </Box>
-            </Tooltip>
-          </ListItem>
-          
-          {/* Purchases Popup Menu for Collapsed Sidebar */}
-          <Menu
-            anchorEl={purchasesPopupAnchor}
-            open={Boolean(purchasesPopupAnchor)}
-            onClose={handlePurchasesPopupClose}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                ml: 1,
-                minWidth: 200,
-                background: mode === 'dark' 
-                  ? 'rgba(15, 23, 42, 0.98)' 
-                  : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                border: mode === 'dark' 
-                  ? '1px solid rgba(255, 255, 255, 0.15)' 
-                  : '1px solid rgba(0, 0, 0, 0.1)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                borderRadius: 2,
-                '& .MuiMenuItem-root': {
-                  borderRadius: 2,
-                  mx: 1,
-                  my: 0.5,
-                  color: mode === 'dark' 
-                    ? 'rgba(241, 245, 249, 0.9)' 
-                    : 'rgba(30, 41, 59, 0.9)',
-                  '&:hover': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.6)' 
-                      : 'rgba(229, 231, 235, 0.6)',
-                    color: mode === 'dark' ? '#ffffff' : '#1e293b',
-                  },
-                  '&.Mui-selected': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.9)' 
-                      : 'rgba(229, 231, 235, 0.9)',
-                    color: '#ffffff',
-                  },
-                },
-              },
-            }}
-          >
-            {purchaseItems.map((item) => {
-              const selected = isSelected(item.path);
-              return (
-                <MenuItem
-                  key={item.text}
-                  selected={selected}
-                  onClick={() => {
-                    navigate(item.path);
-                    handlePurchasesPopupClose();
-                    setMobileOpen(false);
-                  }}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    py: 1.5,
-                    px: 2,
-                  }}
-                >
-                  <Box sx={{ 
-                    color: 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}>
-                    {item.icon}
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500 }}>
-                      {item.text}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              );
-            })}
-          </Menu>
-          
-          <Collapse in={openPurchases && !sidebarCollapsed} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding sx={{ 
-              '& .MuiListItem-root': { 
-                padding: 0,
-                margin: '1px 0'
-              },
-              '& .MuiListItemButton-root': {
-                paddingLeft: 6,
-                paddingY: 1.5,
-                marginX: 0.5,
-                borderRadius: 2,
-                background: 'transparent',
-                border: '1px solid transparent',
-                '&:hover': {
-                  background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                }
-              }
-            }}>
-              {purchaseItems.map((sub) => {
-                const selected = isSelected(sub.path);
-                return (
-                  <ListItem key={sub.text} disablePadding>
-                    <ListItemButton
-                      selected={selected}
-                      onClick={() => {
-                        navigate(sub.path);
-                        setMobileOpen(false);
-                      }}
-                      sx={{ 
-                        pl: 6, 
-                        py: 1.5, 
-                        mx: 0.5, 
-                        borderRadius: 2,
-                        color: selected 
-                          ? '#ffffff' 
-                          : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                        background: selected ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') : 'transparent',
-                        border: '1px solid transparent',
-                        '&:hover': {
-                          background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                        }
-                      }}
-                    >
-                      <ListItemIcon sx={{ 
-                        color: 'inherit', 
-                        minWidth: 32,
-                        '& .MuiSvgIcon-root': { fontSize: 18 }
-                      }}>
-                        {sub.icon}
-                      </ListItemIcon>
-                      <ListItemText primary={sub.text} />
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-            </List>
-          </Collapse>
-
-          {/* Freight Section */}
-          {!sidebarCollapsed && (
-            <Fade in={!sidebarCollapsed} timeout={300}>
-              <Typography variant="overline" sx={{ 
-                px: 3, 
-                py: 0.5, 
-                mt: 1,
-                color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(30, 41, 59, 0.8)', 
-                fontWeight: 600, 
-                letterSpacing: 1,
-                textShadow: mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-              }}>
-                Freight
-              </Typography>
-            </Fade>
-          )}
-          
-          <ListItem disablePadding sx={{ mb: 0.5, mt: 0.5 }}>
-            <Tooltip 
-              title={sidebarCollapsed ? 'Freight' : ''} 
-              placement="right"
-              arrow
-            >
-            <Box>
-            <ListItemButton
-              onClick={handleFreightPopupOpen}
-              sx={{
-                borderRadius: 2,
-                mx: 0.5,
-                py: 2,
-                  px: sidebarCollapsed ? 1 : 3,
-                  minHeight: 44,
-                  transition: 'all 0.2s ease',
-                  background: openFreight 
-                    ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') 
-                    : 'transparent',
-                  color: openFreight 
-                    ? '#ffffff' 
-                    : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                  fontWeight: openFreight ? 600 : 500,
-                  border: '1px solid transparent',
-                  '&:hover': {
-                    background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ 
-                  color: 'inherit', 
-                  minWidth: sidebarCollapsed ? 32 : 40,
-                  display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                  '& .MuiSvgIcon-root, & svg': { fontSize: 20 }
-                }}>
-                <Ship size={20} />
-              </ListItemIcon>
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-                    <ListItemText primary="Freight" />
-                  </Fade>
-                )}
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-              {openFreight ? <ExpandLess /> : <ExpandMore />}
-                  </Fade>
-                )}
-            </ListItemButton>
-            </Box>
-            </Tooltip>
-          </ListItem>
-          
-          {/* Freight Popup Menu for Collapsed Sidebar */}
-          <Menu
-            anchorEl={freightPopupAnchor}
-            open={Boolean(freightPopupAnchor)}
-            onClose={handleFreightPopupClose}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                ml: 1,
-                minWidth: 200,
-                background: mode === 'dark' 
-                  ? 'rgba(15, 23, 42, 0.98)' 
-                  : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                border: mode === 'dark' 
-                  ? '1px solid rgba(255, 255, 255, 0.15)' 
-                  : '1px solid rgba(0, 0, 0, 0.1)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                borderRadius: 2,
-                '& .MuiMenuItem-root': {
-                  borderRadius: 2,
-                  mx: 1,
-                  my: 0.5,
-                  color: mode === 'dark' 
-                    ? 'rgba(241, 245, 249, 0.9)' 
-                    : 'rgba(30, 41, 59, 0.9)',
-                  '&:hover': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.6)' 
-                      : 'rgba(229, 231, 235, 0.6)',
-                    color: mode === 'dark' ? '#ffffff' : '#1e293b',
-                  },
-                  '&.Mui-selected': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.9)' 
-                      : 'rgba(229, 231, 235, 0.9)',
-                    color: '#ffffff',
-                  },
-                },
-              },
-            }}
-          >
-            {freightItems.map((item) => {
-              const selected = isSelected(item.path);
-              return (
-                <MenuItem
-                  key={item.text}
-                  selected={selected}
-                  onClick={() => {
-                    navigate(item.path);
-                    handleFreightPopupClose();
-                    setMobileOpen(false);
-                  }}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    py: 1.5,
-                    px: 2,
-                  }}
-                >
-                  <Box sx={{ 
-                    color: 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}>
-                    {item.icon}
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500 }}>
-                      {item.text}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              );
-            })}
-          </Menu>
-          
-          <Collapse in={openFreight && !sidebarCollapsed} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding sx={{ 
-              '& .MuiListItem-root': { 
-                padding: 0,
-                margin: '1px 0'
-              },
-              '& .MuiListItemButton-root': {
-                paddingLeft: 6,
-                paddingY: 1.5,
-                marginX: 0.5,
-                borderRadius: 2,
-                background: 'transparent',
-                border: '1px solid transparent',
-                '&:hover': {
-                  background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                }
-              }
-            }}>
-              {freightItems.map((sub) => {
-                const selected = isSelected(sub.path);
-                return (
-                  <ListItem key={sub.text} disablePadding>
-                    <ListItemButton
-                      selected={selected}
-                      onClick={() => {
-                        navigate(sub.path);
-                        setMobileOpen(false);
-                      }}
-                      sx={{ 
-                        pl: 6, 
-                        py: 1.5, 
-                        mx: 0.5, 
-                        borderRadius: 2,
-                        color: selected 
-                          ? '#ffffff' 
-                          : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                        background: selected ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') : 'transparent',
-                        border: '1px solid transparent',
-                        '&:hover': {
-                          background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                        }
-                      }}
-                    >
-                      <ListItemIcon sx={{ 
-                        color: 'inherit', 
-                        minWidth: 32,
-                        '& .MuiSvgIcon-root': { fontSize: 18 }
-                      }}>
-                        {sub.icon}
-                      </ListItemIcon>
-                      <ListItemText primary={sub.text} />
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-            </List>
-          </Collapse>
-
-          {/* Transport Section */}
-          {!sidebarCollapsed && (
-            <Fade in={!sidebarCollapsed} timeout={300}>
-              <Typography variant="overline" sx={{ 
-                px: 3, 
-                py: 0.5, 
-                mt: 1,
-                color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(30, 41, 59, 0.8)', 
-                fontWeight: 600, 
-                letterSpacing: 1,
-                textShadow: mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-              }}>
-                Transport
-              </Typography>
-            </Fade>
-          )}
-          
-          <ListItem disablePadding sx={{ mb: 0.5, mt: 0.5 }}>
-            <Tooltip 
-              title={sidebarCollapsed ? 'Transport' : ''} 
-              placement="right"
-              arrow
-            >
-            <Box>
-            <ListItemButton
-              onClick={handleTransportPopupOpen}
-              sx={{
-                borderRadius: 2,
-                mx: 0.5,
-                py: 2,
-                  px: sidebarCollapsed ? 1 : 3,
-                  minHeight: 44,
-                  transition: 'all 0.2s ease',
-                  background: openTransport 
-                    ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') 
-                    : 'transparent',
-                  color: openTransport 
-                    ? '#ffffff' 
-                    : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                  fontWeight: openTransport ? 600 : 500,
-                  border: '1px solid transparent',
-                  '&:hover': {
-                    background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ 
-                  color: 'inherit', 
-                  minWidth: sidebarCollapsed ? 32 : 40,
-                  display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                  '& .MuiSvgIcon-root, & svg': { fontSize: 20 }
-                }}>
-                <Truck size={20} />
-              </ListItemIcon>
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-                    <ListItemText primary="Transport" />
-                  </Fade>
-                )}
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-              {openTransport ? <ExpandLess /> : <ExpandMore />}
-                  </Fade>
-                )}
-            </ListItemButton>
-            </Box>
-            </Tooltip>
-          </ListItem>
-          
-          {/* Transport Popup Menu for Collapsed Sidebar */}
-          <Menu
-            anchorEl={transportPopupAnchor}
-            open={Boolean(transportPopupAnchor)}
-            onClose={handleTransportPopupClose}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                ml: 1,
-                minWidth: 200,
-                background: mode === 'dark' 
-                  ? 'rgba(15, 23, 42, 0.98)' 
-                  : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                border: mode === 'dark' 
-                  ? '1px solid rgba(255, 255, 255, 0.15)' 
-                  : '1px solid rgba(0, 0, 0, 0.1)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                borderRadius: 2,
-                '& .MuiMenuItem-root': {
-                  borderRadius: 2,
-                  mx: 1,
-                  my: 0.5,
-                  color: mode === 'dark' 
-                    ? 'rgba(241, 245, 249, 0.9)' 
-                    : 'rgba(30, 41, 59, 0.9)',
-                  '&:hover': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.6)' 
-                      : 'rgba(229, 231, 235, 0.6)',
-                    color: mode === 'dark' ? '#ffffff' : '#1e293b',
-                  },
-                  '&.Mui-selected': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.9)' 
-                      : 'rgba(229, 231, 235, 0.9)',
-                    color: '#ffffff',
-                  },
-                },
-              },
-            }}
-          >
-            {transportItems.map((item) => {
-              const selected = isSelected(item.path);
-              return (
-                <MenuItem
-                  key={item.text}
-                  selected={selected}
-                  onClick={() => {
-                    navigate(item.path);
-                    handleTransportPopupClose();
-                    setMobileOpen(false);
-                  }}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    py: 1.5,
-                    px: 2,
-                  }}
-                >
-                  <Box sx={{ 
-                    color: 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}>
-                    {item.icon}
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500 }}>
-                      {item.text}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              );
-            })}
-          </Menu>
-          
-          <Collapse in={openTransport && !sidebarCollapsed} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding sx={{ 
-              '& .MuiListItem-root': { 
-                padding: 0,
-                margin: '1px 0'
-              },
-              '& .MuiListItemButton-root': {
-                paddingLeft: 6,
-                paddingY: 1.5,
-                marginX: 0.5,
-                borderRadius: 2,
-                background: 'transparent',
-                border: '1px solid transparent',
-                '&:hover': {
-                  background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                }
-              }
-            }}>
-              {transportItems.map((sub) => {
-                const selected = isSelected(sub.path);
-                return (
-                  <ListItem key={sub.text} disablePadding>
-                    <ListItemButton
-                      selected={selected}
-                      onClick={() => {
-                        navigate(sub.path);
-                        setMobileOpen(false);
-                      }}
-                      sx={{ 
-                        pl: 6, 
-                        py: 1.5, 
-                        mx: 0.5, 
-                        borderRadius: 2,
-                        color: selected 
-                          ? '#ffffff' 
-                          : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                        background: selected ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') : 'transparent',
-                        border: '1px solid transparent',
-                        '&:hover': {
-                          background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                        }
-                      }}
-                    >
-                      <ListItemIcon sx={{ 
-                        color: 'inherit', 
-                        minWidth: 32,
-                        '& .MuiSvgIcon-root': { fontSize: 18 }
-                      }}>
-                        {sub.icon}
-                      </ListItemIcon>
-                      <ListItemText primary={sub.text} />
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-            </List>
-          </Collapse>
-
-          {/* Dubai Transport Section */}
-          {!sidebarCollapsed && (
-            <Fade in={!sidebarCollapsed} timeout={300}>
-              <Typography variant="overline" sx={{ 
-                px: 3, 
-                py: 0.5, 
-                mt: 1,
-                color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(30, 41, 59, 0.8)', 
-                fontWeight: 600, 
-                letterSpacing: 1,
-                textShadow: mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-              }}>
-                Dubai Transport
-              </Typography>
-            </Fade>
-          )}
-          
-          <ListItem disablePadding sx={{ mb: 0.5, mt: 0.5 }}>
-            <Tooltip 
-              title={sidebarCollapsed ? 'Dubai Transport' : ''} 
-              placement="right"
-              arrow
-            >
-            <Box>
-            <ListItemButton
-              onClick={handleDubaiTransportPopupOpen}
-              sx={{
-                borderRadius: 2,
-                mx: 0.5,
-                py: 2,
-                  px: sidebarCollapsed ? 1 : 3,
-                  minHeight: 44,
-                  transition: 'all 0.2s ease',
-                  background: openDubaiTransport 
-                    ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') 
-                    : 'transparent',
-                  color: openDubaiTransport 
-                    ? '#ffffff' 
-                    : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                  fontWeight: openDubaiTransport ? 600 : 500,
-                  border: '1px solid transparent',
-                  '&:hover': {
-                    background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ 
-                  color: 'inherit', 
-                  minWidth: sidebarCollapsed ? 32 : 40,
-                  display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                  '& .MuiSvgIcon-root, & svg': { fontSize: 20 }
-                }}>
-                <Truck size={20} />
-              </ListItemIcon>
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-                    <ListItemText primary="Dubai Transport" />
-                  </Fade>
-                )}
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-              {openDubaiTransport ? <ExpandLess /> : <ExpandMore />}
-                  </Fade>
-                )}
-            </ListItemButton>
-            </Box>
-            </Tooltip>
-          </ListItem>
-          
-          {/* Dubai Transport Popup Menu for Collapsed Sidebar */}
-          <Menu
-            anchorEl={dubaiTransportPopupAnchor}
-            open={Boolean(dubaiTransportPopupAnchor)}
-            onClose={handleDubaiTransportPopupClose}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                ml: 1,
-                minWidth: 200,
-                background: mode === 'dark' 
-                  ? 'rgba(15, 23, 42, 0.98)' 
-                  : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                border: mode === 'dark' 
-                  ? '1px solid rgba(255, 255, 255, 0.15)' 
-                  : '1px solid rgba(0, 0, 0, 0.1)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                borderRadius: 2,
-                '& .MuiMenuItem-root': {
-                  borderRadius: 2,
-                  mx: 1,
-                  my: 0.5,
-                  color: mode === 'dark' 
-                    ? 'rgba(241, 245, 249, 0.9)' 
-                    : 'rgba(30, 41, 59, 0.9)',
-                  '&:hover': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.6)' 
-                      : 'rgba(229, 231, 235, 0.6)',
-                    color: mode === 'dark' ? '#ffffff' : '#1e293b',
-                  },
-                  '&.Mui-selected': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.9)' 
-                      : 'rgba(229, 231, 235, 0.9)',
-                    color: '#ffffff',
-                  },
-                },
-              },
-            }}
-          >
-            {dubaiTransportItems.map((item) => {
-              const selected = isSelected(item.path);
-              return (
-                <MenuItem
-                  key={item.text}
-                  selected={selected}
-                  onClick={() => {
-                    navigate(item.path);
-                    handleDubaiTransportPopupClose();
-                    setMobileOpen(false);
-                  }}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    py: 1.5,
-                    px: 2,
-                  }}
-                >
-                  <Box sx={{ 
-                    color: 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}>
-                    {item.icon}
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500 }}>
-                      {item.text}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              );
-            })}
-          </Menu>
-          
-          <Collapse in={openDubaiTransport && !sidebarCollapsed} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding sx={{ 
-              '& .MuiListItem-root': { 
-                padding: 0,
-                margin: '1px 0'
-              },
-              '& .MuiListItemButton-root': {
-                paddingLeft: 6,
-                paddingY: 1.5,
-                marginX: 0.5,
-                borderRadius: 2,
-                background: 'transparent',
-                border: '1px solid transparent',
-                '&:hover': {
-                  background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                }
-              }
-            }}>
-              {dubaiTransportItems.map((sub) => {
-                const selected = isSelected(sub.path);
-                return (
-                  <ListItem key={sub.text} disablePadding>
-                    <ListItemButton
-                      selected={selected}
-                      onClick={() => {
-                        navigate(sub.path);
-                        setMobileOpen(false);
-                      }}
-                      sx={{ 
-                        pl: 6, 
-                        py: 1.5, 
-                        mx: 0.5, 
-                        borderRadius: 2,
-                        color: selected 
-                          ? '#ffffff' 
-                          : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                        background: selected ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') : 'transparent',
-                        border: '1px solid transparent',
-                        '&:hover': {
-                          background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                        }
-                      }}
-                    >
-                      <ListItemIcon sx={{ 
-                        color: 'inherit', 
-                        minWidth: 32,
-                        '& .MuiSvgIcon-root': { fontSize: 18 }
-                      }}>
-                        {sub.icon}
-                      </ListItemIcon>
-                      <ListItemText primary={sub.text} />
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-            </List>
-          </Collapse>
-
-          {/* Dubai Clearance Section */}
-          {!sidebarCollapsed && (
-            <Fade in={!sidebarCollapsed} timeout={300}>
-              <Typography variant="overline" sx={{ 
-                px: 3, 
-                py: 0.5, 
-                mt: 1,
-                color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(30, 41, 59, 0.8)', 
-                fontWeight: 600, 
-                letterSpacing: 1,
-                textShadow: mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
-              }}>
-                Dubai Clearance
-              </Typography>
-            </Fade>
-          )}
-          
-          <ListItem disablePadding sx={{ mb: 0.5, mt: 0.5 }}>
-            <Tooltip 
-              title={sidebarCollapsed ? 'Dubai Clearance' : ''} 
-              placement="right"
-              arrow
-            >
-            <Box>
-            <ListItemButton
-              onClick={handleDubaiClearancePopupOpen}
-              sx={{
-                borderRadius: 2,
-                mx: 0.5,
-                py: 2,
-                  px: sidebarCollapsed ? 1 : 3,
-                  minHeight: 44,
-                  transition: 'all 0.2s ease',
-                  background: openDubaiClearance 
-                    ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') 
-                    : 'transparent',
-                  color: openDubaiClearance 
-                    ? '#ffffff' 
-                    : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                  fontWeight: openDubaiClearance ? 600 : 500,
-                  border: '1px solid transparent',
-                  '&:hover': {
-                    background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ 
-                  color: 'inherit', 
-                  minWidth: sidebarCollapsed ? 32 : 40,
-                  display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-                  '& .MuiSvgIcon-root, & svg': { fontSize: 20 }
-                }}>
-                <Ship size={20} />
-              </ListItemIcon>
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-                    <ListItemText primary="Dubai Clearance" />
-                  </Fade>
-                )}
-                {!sidebarCollapsed && (
-                  <Fade in={!sidebarCollapsed} timeout={300}>
-              {openDubaiClearance ? <ExpandLess /> : <ExpandMore />}
-                  </Fade>
-                )}
-            </ListItemButton>
-            </Box>
-            </Tooltip>
-          </ListItem>
-          
-          {/* Dubai Clearance Popup Menu for Collapsed Sidebar */}
-          <Menu
-            anchorEl={dubaiClearancePopupAnchor}
-            open={Boolean(dubaiClearancePopupAnchor)}
-            onClose={handleDubaiClearancePopupClose}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                ml: 1,
-                minWidth: 200,
-                background: mode === 'dark' 
-                  ? 'rgba(15, 23, 42, 0.98)' 
-                  : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                border: mode === 'dark' 
-                  ? '1px solid rgba(255, 255, 255, 0.15)' 
-                  : '1px solid rgba(0, 0, 0, 0.1)',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-                borderRadius: 2,
-                '& .MuiMenuItem-root': {
-                  borderRadius: 2,
-                  mx: 1,
-                  my: 0.5,
-                  color: mode === 'dark' 
-                    ? 'rgba(241, 245, 249, 0.9)' 
-                    : 'rgba(30, 41, 59, 0.9)',
-                  '&:hover': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.6)' 
-                      : 'rgba(229, 231, 235, 0.6)',
-                    color: mode === 'dark' ? '#ffffff' : '#1e293b',
-                  },
-                  '&.Mui-selected': {
-                    background: mode === 'dark' 
-                      ? 'rgba(31, 41, 55, 0.9)' 
-                      : 'rgba(229, 231, 235, 0.9)',
-                    color: '#ffffff',
-                  },
-                },
-              },
-            }}
-          >
-            {dubaiClearanceItems.map((item) => {
-              const selected = isSelected(item.path);
-              return (
-                <MenuItem
-                  key={item.text}
-                  selected={selected}
-                  onClick={() => {
-                    navigate(item.path);
-                    handleDubaiClearancePopupClose();
-                    setMobileOpen(false);
-                  }}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    py: 1.5,
-                    px: 2,
-                  }}
-                >
-                  <Box sx={{ 
-                    color: 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}>
-                    {item.icon}
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500 }}>
-                      {item.text}
-                    </Typography>
-                  </Box>
-                </MenuItem>
-              );
-            })}
-          </Menu>
-          
-          <Collapse in={openDubaiClearance && !sidebarCollapsed} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding sx={{ 
-              '& .MuiListItem-root': { 
-                padding: 0,
-                margin: '1px 0'
-              },
-              '& .MuiListItemButton-root': {
-                paddingLeft: 6,
-                paddingY: 1.5,
-                marginX: 0.5,
-                borderRadius: 2,
-                background: 'transparent',
-                border: '1px solid transparent',
-                '&:hover': {
-                  background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                }
-              }
-            }}>
-              {dubaiClearanceItems.map((sub) => {
-                const selected = isSelected(sub.path);
-                return (
-                  <ListItem key={sub.text} disablePadding>
-                    <ListItemButton
-                      selected={selected}
-                      onClick={() => {
-                        navigate(sub.path);
-                        setMobileOpen(false);
-                      }}
-                      sx={{ 
-                        pl: 6, 
-                        py: 1.5, 
-                        mx: 0.5, 
-                        borderRadius: 2,
-                        color: selected 
-                          ? '#ffffff' 
-                          : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
-                        background: selected ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)') : 'transparent',
-                        border: '1px solid transparent',
-                        '&:hover': {
-                          background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-                        }
-                      }}
-                    >
-                      <ListItemIcon sx={{ 
-                        color: 'inherit', 
-                        minWidth: 32,
-                        '& .MuiSvgIcon-root': { fontSize: 18 }
-                      }}>
-                        {sub.icon}
-                      </ListItemIcon>
-                      <ListItemText primary={sub.text} />
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-            </List>
-          </Collapse>
-        </List>
-      </Box>
-
-      {/* User Profile Section */}
-      <Box sx={{ 
-        p: 2, 
-        borderTop: mode === 'dark' 
-          ? '1px solid rgba(255, 255, 255, 0.1)' 
-          : '1px solid rgba(0, 0, 0, 0.1)',
-        flexShrink: 0,
-        position: 'relative',
-        zIndex: 1,
-      }}>
-        {sidebarCollapsed ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <IconButton onClick={handleProfileMenuOpen} aria-label="Profile">
-              <AccountCircle />
-            </IconButton>
-          </Box>
-        ) : (
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 2, 
-          p: 2, 
-          px: 3,
-          borderRadius: 2,
-            background: 'transparent',
-            border: '1px solid transparent',
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-            }
-        }}>
-          <Avatar sx={{ 
-            width: 28, 
-            height: 28, 
-              background: mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)',
-              color: mode === 'dark' ? '#ffffff' : '#1f2937',
-            fontWeight: 600,
-              fontSize: 12,
-              border: '1px solid transparent',
-          }}>
-            {user?.name?.charAt(0)?.toUpperCase()}
-          </Avatar>
-            <Fade in timeout={300}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" sx={{ 
-                  fontWeight: 500, 
-                  color: mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937',
-                  fontSize: 13,
-                }}>
-              {user?.name || 'User'}
-            </Typography>
-                <Typography variant="caption" sx={{ 
-                  color: mode === 'dark' 
-                    ? 'rgba(241, 245, 249, 0.6)' 
-                    : 'rgba(30, 41, 59, 0.6)',
-                  fontSize: 11,
-                }}>
-              {user?.email || 'user@example.com'}
-            </Typography>
-          </Box>
-            </Fade>
-          <IconButton
-            size="small"
-            onClick={handleProfileMenuOpen}
-              sx={{ 
-                color: mode === 'dark' 
-                  ? 'rgba(241, 245, 249, 0.7)' 
-                  : 'rgba(30, 41, 59, 0.7)',
-                padding: 0.5,
-                '&:hover': {
-                  color: mode === 'dark' ? '#ffffff' : '#1f293b',
-                  background: 'transparent',
-                }
-              }}
-          >
-            <ExpandMore fontSize="small" />
-          </IconButton>
-        </Box>
-        )}
-      </Box>
-    </Box>
-  );
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -1863,11 +105,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         sx={{
           width: { 
             xs: '100%', 
-            sm: `calc(100% - ${sidebarCollapsed ? collapsedDrawerWidth : drawerWidth}px)` 
+            sm: `calc(100% - ${sidebarCollapsed ? 70 : 280}px)` 
           },
           ml: { 
             xs: 0, 
-            sm: `${sidebarCollapsed ? collapsedDrawerWidth : drawerWidth}px` 
+            sm: `${sidebarCollapsed ? 70 : 280}px` 
           },
           bgcolor: mode === 'dark' 
           ? 'rgba(15, 23, 42, 0.95)' 
@@ -1926,24 +168,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </Typography>
           </Box>
 
-          
-
           {/* Right Side Actions */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {/* Theme Toggle */}
-            <Tooltip title={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`} arrow>
-              <Box sx={{ 
-                bgcolor: 'rgba(139, 92, 246, 0.1)',
-                borderRadius: 1,
-                p: 0.5,
-                '&:hover': { 
-                  bgcolor: 'rgba(139, 92, 246, 0.2)',
-                },
-                transition: 'all 0.2s ease',
-              }}>
-                <ThemeToggle />
-              </Box>
-            </Tooltip>
+            <ThemeToggle />
 
             {/* Notifications */}
             <Tooltip title="Notifications" arrow>
@@ -1958,7 +186,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   transition: 'all 0.2s ease',
               }}
             >
-              <Badge badgeContent={3} color="error">
+              <Badge badgeContent={unreadCount} color="error" max={99}>
                 <Notifications />
               </Badge>
             </IconButton>
@@ -1983,58 +211,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </Toolbar>
       </AppBar>
 
-      {/* Sidebar */}
-      <Box
-        component="nav"
-        sx={{ 
-          width: { 
-            sm: sidebarCollapsed ? collapsedDrawerWidth : drawerWidth 
-          }, 
-          flexShrink: { sm: 0 },
-          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          height: '100vh',
-          zIndex: 1200,
-        }}
-        aria-label="mailbox folders"
-      >
-        <Drawer
-          variant="temporary"
-          open={mobileOpen}
-          onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true,
-          }}
-          sx={{
-            display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-              borderRight: 'none',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-            },
-          }}
-        >
-          {drawer}
-        </Drawer>
-        <Drawer
-          variant="permanent"
-          sx={{
-            display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: sidebarCollapsed ? collapsedDrawerWidth : drawerWidth,
-              borderRight: 'none',
-              transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            },
-          }}
-          open
-        >
-          {drawer}
-        </Drawer>
-      </Box>
+      {/* Sidebar Component */}
+      <Sidebar 
+        mobileOpen={mobileOpen}
+        onMobileToggle={handleDrawerToggle}
+        onProfileMenuOpen={handleProfileMenuOpen}
+      />
 
       {/* Main Content */}
       <Box
@@ -2043,20 +225,40 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           flexGrow: 1,
           width: { 
             xs: '100%', 
-            sm: `calc(100vw - ${sidebarCollapsed ? collapsedDrawerWidth : drawerWidth}px)` 
+            sm: `calc(100vw - ${sidebarCollapsed ? 70 : 280}px)` 
           },
-          minHeight: '100vh',
+          height: '100vh',
           bgcolor: 'background.default',
         background: mode === 'dark' 
           ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' 
           : 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
           transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           overflow: 'hidden',
-          marginLeft: { sm: `${sidebarCollapsed ? collapsedDrawerWidth : drawerWidth}px` },
+          marginLeft: { sm: `${sidebarCollapsed ? 70 : 280}px` },
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <Toolbar sx={{ height: 70 }} />
-        <Box sx={{ p: 3 }}>
+        <Toolbar sx={{ height: 70, flexShrink: 0 }} />
+        <Box sx={{ 
+          flex: 1, 
+          p: 3, 
+          overflow: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '4px',
+            '&:hover': {
+              background: mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+            },
+          },
+        }}>
           {children}
         </Box>
       </Box>
@@ -2097,22 +299,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         }}
       >
         <MenuItem onClick={() => navigate('/profile')} sx={{ py: 1.5 }}>
-          <ListItemIcon>
-            <AccountCircle fontSize="small" />
-          </ListItemIcon>
+          <AccountCircle fontSize="small" sx={{ mr: 1 }} />
           Profile
         </MenuItem>
         <MenuItem onClick={() => navigate('/settings')} sx={{ py: 1.5 }}>
-          <ListItemIcon>
-            <Settings fontSize="small" />
-          </ListItemIcon>
+          <Settings fontSize="small" sx={{ mr: 1 }} />
           Settings
         </MenuItem>
         <Divider />
         <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: 'error.main' }}>
-          <ListItemIcon>
-            <Logout fontSize="small" sx={{ color: 'error.main' }} />
-          </ListItemIcon>
+          <Logout fontSize="small" sx={{ mr: 1, color: 'error.main' }} />
           Logout
         </MenuItem>
       </Menu>
@@ -2127,66 +323,291 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         PaperProps={{
           sx: {
             mt: 1,
-            minWidth: 300,
-            maxHeight: 400,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+            minWidth: 320,
+            maxHeight: 450,
+            boxShadow: mode === 'dark' 
+              ? '0 8px 32px rgba(0,0,0,0.4)' 
+              : '0 8px 32px rgba(0,0,0,0.15)',
             borderRadius: 3,
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            background: 'rgba(255, 255, 255, 0.95)',
+            border: mode === 'dark' 
+              ? '1px solid rgba(255, 255, 255, 0.1)' 
+              : '1px solid rgba(0, 0, 0, 0.1)',
+            background: mode === 'dark' 
+              ? 'rgba(15, 23, 42, 0.95)' 
+              : 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(20px)',
+            overflow: 'hidden',
           }
         }}
       >
-        <Box sx={{ p: 2, borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#8b5cf6' }}>
-            Notifications
-          </Typography>
+        {/* Header */}
+        <Box sx={{ 
+          p: 2, 
+          borderBottom: mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.1)' 
+            : '1px solid rgba(0, 0, 0, 0.1)',
+          background: mode === 'dark' 
+            ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)'
+            : 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%)',
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 700, 
+              color: mode === 'dark' ? '#a5b4fc' : '#8b5cf6',
+              fontSize: '1.1rem',
+            }}>
+              Notifications
+            </Typography>
+            {unreadCount > 0 && (
+              <Box sx={{
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 2,
+                background: mode === 'dark' 
+                  ? 'rgba(239, 68, 68, 0.2)' 
+                  : 'rgba(239, 68, 68, 0.1)',
+                border: mode === 'dark' 
+                  ? '1px solid rgba(239, 68, 68, 0.3)' 
+                  : '1px solid rgba(239, 68, 68, 0.2)',
+              }}>
+                <Typography variant="caption" sx={{ 
+                  color: mode === 'dark' ? '#fca5a5' : '#dc2626',
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                }}>
+                  {unreadCount} New
+                </Typography>
+              </Box>
+            )}
+          </Box>
         </Box>
-        <MenuItem sx={{ py: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'success.main' }}>
-              <ReceiptIcon fontSize="small" />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                New Sale Created
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Invoice #INV-001 has been created
-              </Typography>
-            </Box>
-          </Box>
-        </MenuItem>
-        <MenuItem sx={{ py: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'warning.main' }}>
-              <Notifications fontSize="small" />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                Payment Overdue
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                3 invoices are overdue
+
+        {/* Notification Items */}
+        <Box sx={{ maxHeight: 350, overflowY: 'auto' }}>
+          {notifications.filter(n => !n.read).length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body2" sx={{ 
+                color: mode === 'dark' ? 'rgba(241, 245, 249, 0.6)' : 'rgba(30, 41, 59, 0.6)',
+                fontStyle: 'italic',
+              }}>
+                No notifications yet
               </Typography>
             </Box>
-          </Box>
-        </MenuItem>
-        <MenuItem sx={{ py: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'info.main' }}>
-              <Users fontSize="small" />
-            </Avatar>
-            <Box>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                New Customer Added
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                John Doe has been registered
-              </Typography>
+          ) : (
+            notifications.filter(n => !n.read).slice(0, 10).map((notification, index) => {
+              const getNotificationIcon = () => {
+                switch (notification.type) {
+                  case 'success':
+                    return <ReceiptIcon fontSize="small" />;
+                  case 'warning':
+                    return <Notifications fontSize="small" />;
+                  case 'info':
+                    return <Users fontSize="small" />;
+                  case 'error':
+                    return <Notifications fontSize="small" />;
+                  default:
+                    return <Notifications fontSize="small" />;
+                }
+              };
+
+              const getNotificationColor = () => {
+                switch (notification.type) {
+                  case 'success':
+                    return 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                  case 'warning':
+                    return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                  case 'info':
+                    return 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+                  case 'error':
+                    return 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                  default:
+                    return 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+                }
+              };
+
+              const getNotificationShadow = () => {
+                switch (notification.type) {
+                  case 'success':
+                    return '0 4px 12px rgba(16, 185, 129, 0.3)';
+                  case 'warning':
+                    return '0 4px 12px rgba(245, 158, 11, 0.3)';
+                  case 'info':
+                    return '0 4px 12px rgba(59, 130, 246, 0.3)';
+                  case 'error':
+                    return '0 4px 12px rgba(239, 68, 68, 0.3)';
+                  default:
+                    return '0 4px 12px rgba(107, 114, 128, 0.3)';
+                }
+              };
+
+              const getNotificationDotColor = () => {
+                switch (notification.type) {
+                  case 'success':
+                    return '#10b981';
+                  case 'warning':
+                    return '#f59e0b';
+                  case 'info':
+                    return '#3b82f6';
+                  case 'error':
+                    return '#ef4444';
+                  default:
+                    return '#6b7280';
+                }
+              };
+
+              const formatTimeAgo = (timestamp: Date) => {
+                const now = new Date();
+                const diff = now.getTime() - timestamp.getTime();
+                const minutes = Math.floor(diff / 60000);
+                const hours = Math.floor(diff / 3600000);
+                const days = Math.floor(diff / 86400000);
+
+                if (minutes < 1) return 'Just now';
+                if (minutes < 60) return `${minutes}m ago`;
+                if (hours < 24) return `${hours}h ago`;
+                return `${days}d ago`;
+              };
+
+              return (
+                <MenuItem 
+                  key={notification.id}
+                  sx={{ 
+                    py: 2, 
+                    px: 2,
+                    borderBottom: index < notifications.filter(n => !n.read).slice(0, 10).length - 1 ? (mode === 'dark' 
+                      ? '1px solid rgba(255, 255, 255, 0.05)' 
+                      : '1px solid rgba(0, 0, 0, 0.05)') : 'none',
+                    '&:hover': {
+                      background: mode === 'dark' 
+                        ? 'rgba(99, 102, 241, 0.1)' 
+                        : 'rgba(99, 102, 241, 0.05)',
+                    },
+                    transition: 'all 0.2s ease',
+                    opacity: notification.read ? 0.7 : 1,
+                  }}
+                  onClick={() => {
+                    markAsRead(notification.id);
+                    if (notification.actionUrl) {
+                      navigate(notification.actionUrl);
+                      handleNotificationMenuClose();
+                    }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                    <Avatar sx={{ 
+                      width: 36, 
+                      height: 36, 
+                      background: getNotificationColor(),
+                      boxShadow: getNotificationShadow(),
+                    }}>
+                      {getNotificationIcon()}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ 
+                        fontWeight: notification.read ? 500 : 600,
+                        color: mode === 'dark' ? '#f1f5f9' : '#1e293b',
+                        mb: 0.5,
+                      }}>
+                        {notification.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ 
+                        color: mode === 'dark' ? 'rgba(241, 245, 249, 0.7)' : 'rgba(30, 41, 59, 0.7)',
+                        display: 'block',
+                        mb: 0.5,
+                      }}>
+                        {notification.message}
+                      </Typography>
+                      <Typography variant="caption" sx={{ 
+                        color: mode === 'dark' ? 'rgba(241, 245, 249, 0.5)' : 'rgba(30, 41, 59, 0.5)',
+                        fontSize: '0.7rem',
+                      }}>
+                        {formatTimeAgo(notification.timestamp)}
+                      </Typography>
+                    </Box>
+                    {!notification.read && (
+                      <Box sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: getNotificationDotColor(),
+                        boxShadow: `0 0 8px ${getNotificationDotColor()}50`,
+                      }} />
+                    )}
+                  </Box>
+                </MenuItem>
+              );
+            })
+          )}
+        </Box>
+
+        {/* Footer */}
+        {notifications.filter(n => !n.read).length > 0 && (
+          <Box sx={{ 
+            p: 2, 
+            borderTop: mode === 'dark' 
+              ? '1px solid rgba(255, 255, 255, 0.1)' 
+              : '1px solid rgba(0, 0, 0, 0.1)',
+            background: mode === 'dark' 
+              ? 'rgba(15, 23, 42, 0.5)' 
+              : 'rgba(248, 250, 252, 0.5)',
+          }}>
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+              <Button
+                size="small"
+                variant="text"
+                onClick={refreshNotifications}
+                sx={{
+                  color: mode === 'dark' ? '#8b5cf6' : '#6366f1',
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  '&:hover': {
+                    color: mode === 'dark' ? '#a5b4fc' : '#4f46e5',
+                    background: mode === 'dark' ? 'rgba(139, 92, 246, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+                  },
+                }}
+              >
+                Refresh
+              </Button>
+              {unreadCount > 0 && (
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={markAllAsRead}
+                  sx={{
+                    color: mode === 'dark' ? '#8b5cf6' : '#6366f1',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    '&:hover': {
+                      color: mode === 'dark' ? '#a5b4fc' : '#4f46e5',
+                      background: mode === 'dark' ? 'rgba(139, 92, 246, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+                    },
+                  }}
+                >
+                  Mark All Read
+                </Button>
+              )}
+              <Button
+                size="small"
+                variant="text"
+                onClick={() => {
+                  navigate('/notifications');
+                  handleNotificationMenuClose();
+                }}
+                sx={{
+                  color: mode === 'dark' ? '#8b5cf6' : '#6366f1',
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  '&:hover': {
+                    color: mode === 'dark' ? '#a5b4fc' : '#4f46e5',
+                    background: mode === 'dark' ? 'rgba(139, 92, 246, 0.1)' : 'rgba(99, 102, 241, 0.1)',
+                  },
+                }}
+              >
+                View All
+              </Button>
             </Box>
           </Box>
-        </MenuItem>
+        )}
       </Menu>
     </Box>
   );

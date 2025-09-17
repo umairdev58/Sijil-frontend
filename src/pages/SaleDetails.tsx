@@ -117,7 +117,8 @@ const SaleDetails: React.FC = () => {
     paymentMethod: 'cash',
     reference: '',
     notes: '',
-    paymentDate: new Date().toISOString().split('T')[0]
+    paymentDate: new Date().toISOString().split('T')[0],
+    discount: ''
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [deletePaymentDialogOpen, setDeletePaymentDialogOpen] = useState(false);
@@ -332,15 +333,24 @@ const SaleDetails: React.FC = () => {
         }
       }
 
+      // Prepare sale data for API - convert empty strings to undefined for optional fields
+      const saleData = {
+        ...sale,
+        vatPercentage: sale.vatPercentage === '' ? undefined : parseFloat(sale.vatPercentage),
+        discount: sale.discount === '' ? undefined : parseFloat(sale.discount),
+        quantity: parseFloat(sale.quantity),
+        rate: parseFloat(sale.rate)
+      };
+
       if (isNewSale) {
-        const response = await apiService.createSale(sale);
+        const response = await apiService.createSale(saleData);
         if (response.success && response.data) {
           navigate(`/sales?newSale=true`);
         } else {
           setError(response.message || 'Failed to create sale');
         }
       } else {
-        const response = await apiService.updateSale(id!, sale);
+        const response = await apiService.updateSale(id!, saleData);
         if (response.success && response.sale) {
           navigate(`/sales/${id}`);
         } else {
@@ -397,7 +407,8 @@ const SaleDetails: React.FC = () => {
         paymentMethod: paymentForm.paymentMethod,
         reference: paymentForm.reference,
         notes: paymentForm.notes,
-        paymentDate: paymentForm.paymentDate
+        paymentDate: paymentForm.paymentDate,
+        discount: paymentForm.discount === '' ? 0 : parseFloat(paymentForm.discount)
       };
 
       const response = await apiService.addPayment(id!, paymentData);
@@ -413,7 +424,8 @@ const SaleDetails: React.FC = () => {
           paymentMethod: 'cash',
           reference: '',
           notes: '',
-          paymentDate: new Date().toISOString().split('T')[0]
+          paymentDate: new Date().toISOString().split('T')[0],
+          discount: ''
         });
         setShowPaymentForm(false);
         navigate(`/sales/${id}`);
@@ -712,24 +724,6 @@ const SaleDetails: React.FC = () => {
                 }
               }}
               inputProps={{ min: 0, max: 100, step: 0.01 }}
-            />
-            <TextField
-              fullWidth
-              type="number"
-              label="Discount (AED)"
-              value={sale.discount || ''}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === '') {
-                  handleInputChange('discount', '');
-                } else {
-                  const numValue = parseFloat(value);
-                  if (!isNaN(numValue) && numValue >= 0) {
-                    handleInputChange('discount', numValue);
-                  }
-                }
-              }}
-              inputProps={{ min: 0, step: 0.01 }}
             />
           </Box>
           
@@ -1124,6 +1118,16 @@ const SaleDetails: React.FC = () => {
                     onChange={(e) => handlePaymentInputChange('reference', e.target.value)}
                     fullWidth
                     placeholder="Transaction ID, cheque number, etc."
+                  />
+
+                  <TextField
+                    label="Discount (AED)"
+                    type="number"
+                    value={paymentForm.discount}
+                    onChange={(e) => handlePaymentInputChange('discount', e.target.value)}
+                    fullWidth
+                    inputProps={{ min: 0, step: 0.01 }}
+                    placeholder="Optional discount amount"
                   />
 
                   <TextField

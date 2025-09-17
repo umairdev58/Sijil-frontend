@@ -59,6 +59,8 @@ import { useNavigate } from 'react-router-dom';
 import { Sales } from '../types';
 import BeautifulRefreshButton from '../components/BeautifulRefreshButton';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ColumnToggle, { ColumnConfig } from '../components/ColumnToggle';
+import { useColumnToggle } from '../hooks/useColumnToggle';
 
 const SalesPage: React.FC = () => {
   const [sales, setSales] = useState<Sales[]>([]);
@@ -91,6 +93,37 @@ const SalesPage: React.FC = () => {
   const { mode } = useAppTheme();
   const { user } = useAuth();
   const [searchInput, setSearchInput] = useState('');
+
+  // Column configuration for table
+  const defaultColumns: ColumnConfig[] = [
+    { id: 'invoiceNumber', label: 'Invoice Number', visible: true, order: 1, required: true },
+    { id: 'customer', label: 'Customer', visible: true, order: 2, required: true },
+    { id: 'product', label: 'Product', visible: true, order: 3 },
+    { id: 'containerNo', label: 'Container No', visible: true, order: 4 },
+    { id: 'marka', label: 'Marka', visible: false, order: 5 },
+    { id: 'description', label: 'Description', visible: false, order: 6 },
+    { id: 'quantity', label: 'Quantity', visible: true, order: 7 },
+    { id: 'rate', label: 'Rate', visible: false, order: 8 },
+    { id: 'amount', label: 'Amount', visible: true, order: 9, required: true },
+    { id: 'receivedAmount', label: 'Received', visible: true, order: 10 },
+    { id: 'outstandingAmount', label: 'Outstanding', visible: true, order: 11, required: true },
+    { id: 'status', label: 'Status', visible: true, order: 12, required: true },
+    { id: 'dueDate', label: 'Due Date', visible: false, order: 13 },
+    { id: 'actions', label: 'Actions', visible: true, order: 14, required: true },
+  ];
+
+  const {
+    columns,
+    visibleColumns,
+    toggleColumn,
+    selectAllColumns,
+    selectNoneColumns,
+    resetToDefault,
+  } = useColumnToggle({
+    defaultColumns,
+    storageKey: 'sales-table-columns',
+    requiredColumns: ['invoiceNumber', 'customer', 'amount', 'outstandingAmount', 'status', 'actions'],
+  });
 
   // Filter states with default current month filter
   const getCurrentMonthDates = () => {
@@ -301,6 +334,181 @@ const SalesPage: React.FC = () => {
     setError(null);
   };
 
+  // Helper function to get status color
+  const getStatusColor = (status: string | undefined) => {
+    switch (status?.toLowerCase()) {
+      case 'paid':
+        return 'success';
+      case 'unpaid':
+        return 'error';
+      case 'partially_paid':
+        return 'warning';
+      case 'overdue':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  // Helper function to render cell content based on column ID
+  const renderCellContent = (sale: Sales, columnId: string) => {
+    switch (columnId) {
+      case 'invoiceNumber':
+        return (
+          <Typography variant="body2" fontFamily="monospace">
+            {sale.invoiceNumber || 'N/A'}
+          </Typography>
+        );
+      case 'customer':
+        return (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ bgcolor: 'primary.main' }}>
+              {sale.customer ? sale.customer.charAt(0).toUpperCase() : 'C'}
+            </Avatar>
+            <Box>
+              <Typography variant="body2" fontWeight="medium">
+                {sale.customer || 'Unknown Customer'}
+              </Typography>
+              <Typography variant="caption" color="textSecondary">
+                {sale.containerNo || 'N/A'}
+              </Typography>
+            </Box>
+          </Box>
+        );
+      case 'product':
+        return (
+          <Typography variant="body2">
+            {sale.product || 'Unknown Product'}
+          </Typography>
+        );
+      case 'containerNo':
+        return (
+          <Typography variant="body2">
+            {sale.containerNo || 'N/A'}
+          </Typography>
+        );
+      case 'marka':
+        return (
+          <Typography variant="body2">
+            {sale.marka || 'N/A'}
+          </Typography>
+        );
+      case 'description':
+        return (
+          <Typography variant="body2">
+            {sale.description || 'N/A'}
+          </Typography>
+        );
+      case 'quantity':
+        return (
+          <Typography variant="body2">
+            {sale.quantity?.toLocaleString() || 'N/A'}
+          </Typography>
+        );
+      case 'rate':
+        return (
+          <Typography variant="body2">
+            {sale.rate ? `AED ${sale.rate.toFixed(2)}` : 'N/A'}
+          </Typography>
+        );
+      case 'amount':
+        return (
+          <Typography variant="body2" fontWeight="medium">
+            AED {(sale.amount || 0).toLocaleString()}
+          </Typography>
+        );
+      case 'receivedAmount':
+        return (
+          <Box sx={{ minWidth: 120 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="caption" color="success.main">
+                Received:
+              </Typography>
+              <Typography variant="caption" fontWeight="medium">
+                AED {(sale.receivedAmount || 0).toLocaleString()}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="caption" color="error">
+                Outstanding:
+              </Typography>
+              <Typography variant="caption" fontWeight="medium">
+                AED {(sale.outstandingAmount || 0).toLocaleString()}
+              </Typography>
+            </Box>
+            <LinearProgress
+              variant="determinate"
+              value={sale.amount ? ((sale.receivedAmount || 0) / sale.amount) * 100 : 0}
+              sx={{ height: 4, borderRadius: 2 }}
+            />
+          </Box>
+        );
+      case 'outstandingAmount':
+        return (
+          <Typography variant="body2" fontWeight="medium" color={sale.outstandingAmount > 0 ? 'error.main' : 'success.main'}>
+            AED {(sale.outstandingAmount || 0).toLocaleString()}
+          </Typography>
+        );
+      case 'status':
+        return (
+          <Chip
+            label={sale.status?.replace('_', ' ').toUpperCase() || 'N/A'}
+            color={getStatusColor(sale.status) as any}
+            size="small"
+          />
+        );
+      case 'dueDate':
+        return (
+          <Typography variant="body2">
+            {sale.dueDate ? new Date(sale.dueDate).toLocaleDateString() : 'N/A'}
+          </Typography>
+        );
+      case 'actions':
+        return (
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="View Details">
+              <IconButton
+                size="small"
+                onClick={() => navigate(`/sales/${sale._id}`)}
+              >
+                <VisibilityIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Add Payment">
+              <IconButton
+                size="small"
+                onClick={() => navigate(`/sales/${sale._id}`)}
+                disabled={sale.outstandingAmount <= 0}
+              >
+                <PaymentIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Print Invoice">
+              <IconButton
+                size="small"
+                onClick={() => window.open(`/api/sales/${sale._id}/print`, '_blank')}
+              >
+                <PrintIcon />
+              </IconButton>
+            </Tooltip>
+            {user?.role === 'admin' && (
+              <Tooltip title="Delete Sale">
+                <IconButton
+                  size="small"
+                  onClick={() => handleDeleteClick(sale)}
+                  color="error"
+                >
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
+        );
+      default:
+        return '-';
+    }
+  };
+
   const handleEdit = (sale: Sales) => {
     navigate(`/sales/${sale._id}/edit`);
   };
@@ -499,6 +707,15 @@ const SalesPage: React.FC = () => {
                 >
               Filters
           </Button>
+            <ColumnToggle
+              columns={columns}
+              onColumnToggle={toggleColumn}
+              onSelectAll={selectAllColumns}
+              onSelectNone={selectNoneColumns}
+              onResetToDefault={resetToDefault}
+              variant="button"
+              size="small"
+            />
             <BeautifulRefreshButton 
               onClick={fetchSales} 
               variant="outlined"
@@ -711,118 +928,31 @@ const SalesPage: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Invoice</TableCell>
-                <TableCell>Customer</TableCell>
-                <TableCell>Product</TableCell>
-                <TableCell align="right">Amount</TableCell>
-                <TableCell>Payment Status</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Actions</TableCell>
+                {visibleColumns.map((column) => (
+                  <TableCell 
+                    key={column.id}
+                    align={['amount', 'receivedAmount', 'outstandingAmount', 'quantity', 'rate'].includes(column.id) ? 'right' : 'left'}
+                  >
+                    {column.label}
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
-                                  {paginatedSales.map((sale) => (
+              {paginatedSales.map((sale) => (
                 <React.Fragment key={sale._id}>
                   <TableRow>
-                    <TableCell>
-                      <Typography variant="body2" fontFamily="monospace">
-                        {sale.invoiceNumber || 'N/A'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          {sale.customer ? sale.customer.charAt(0).toUpperCase() : 'C'}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {sale.customer || 'Unknown Customer'}
-                          </Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            {sale.containerNo || 'N/A'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {sale.product || 'Unknown Product'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" fontWeight="medium">
-                        AED {(sale.amount || 0).toLocaleString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ minWidth: 120 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="caption" color="success.main">
-                            Received:
-                          </Typography>
-                          <Typography variant="caption" fontWeight="medium">
-                            AED {(sale.receivedAmount || 0).toLocaleString()}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="caption" color="error">
-                            Outstanding:
-                          </Typography>
-                          <Typography variant="caption" fontWeight="medium">
-                            AED {(sale.outstandingAmount || 0).toLocaleString()}
-                          </Typography>
-                        </Box>
-                        <LinearProgress
-                          variant="determinate"
-                          value={sale.amount ? ((sale.receivedAmount || 0) / sale.amount) * 100 : 0}
-                          sx={{ height: 4 }}
-                        />
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(sale.status)}
-                    </TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={1}>
-                        <Tooltip title="Print Invoice">
-                          <IconButton size="small" onClick={() => apiService.printInvoice(sale._id)}>
-                            <PrintIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="View Details">
-                          <IconButton size="small" onClick={() => handleView(sale)}>
-                            <VisibilityIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Add Payment">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => handleAddPayment(sale)}
-                            color="primary"
-                          >
-                            <PaymentIcon />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Edit">
-                          <IconButton size="small" onClick={() => handleEdit(sale)}>
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-                        {user?.role === 'admin' && (
-                          <Tooltip title="Delete">
-                            <IconButton size="small" onClick={() => handleDeleteClick(sale)}>
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </Stack>
-                        </TableCell>
-                      </TableRow>
+                    {visibleColumns.map((column) => (
+                      <TableCell key={column.id}>
+                        {renderCellContent(sale, column.id)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
 
                                      {/* Expandable Row */}
                    {expandedRows.includes(sale._id) && (
                      <TableRow>
-                       <TableCell colSpan={7} sx={{ py: 2 }}>
+                       <TableCell colSpan={visibleColumns.length} sx={{ py: 2 }}>
                          <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
                            <Typography variant="h6" gutterBottom>
                              Payment Details
