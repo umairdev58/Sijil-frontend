@@ -1729,85 +1729,109 @@ const Sidebar: React.FC<SidebarProps> = ({
       </Box>
 
       {/* User Profile Section */}
-      <Box sx={{ 
-        p: 2, 
-        borderTop: mode === 'dark' 
-          ? '1px solid rgba(255, 255, 255, 0.1)' 
-          : '1px solid rgba(0, 0, 0, 0.1)',
-        flexShrink: 0,
-        position: 'relative',
-        zIndex: 1,
-      }}>
-        {sidebarCollapsed ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <IconButton onClick={onProfileMenuOpen} aria-label="Profile">
-              <AccountCircle />
-            </IconButton>
-          </Box>
-        ) : (
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 2, 
-            p: 2, 
-            px: 3,
-            borderRadius: 2,
-            background: 'transparent',
-            border: '1px solid transparent',
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
-            }
-          }}>
-            <Avatar sx={{ 
-              width: 28, 
-              height: 28, 
-              background: mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(229, 231, 235, 0.9)',
-              color: mode === 'dark' ? '#ffffff' : '#1f2937',
-              fontWeight: 600,
-              fontSize: 12,
-              border: '1px solid transparent',
-            }}>
-              {user?.name?.charAt(0)?.toUpperCase()}
-            </Avatar>
-            <Fade in timeout={300}>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" sx={{ 
-                  fontWeight: 500, 
-                  color: mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937',
-                  fontSize: 13,
-                }}>
-                  {user?.name || 'User'}
-                </Typography>
-                <Typography variant="caption" sx={{ 
-                  color: mode === 'dark' 
-                    ? 'rgba(241, 245, 249, 0.6)' 
-                    : 'rgba(30, 41, 59, 0.6)',
-                  fontSize: 11,
-                }}>
-                  {user?.email || 'user@example.com'}
-                </Typography>
-              </Box>
-            </Fade>
-            <IconButton
-              size="small"
-              onClick={onProfileMenuOpen}
-              sx={{ 
-                color: mode === 'dark' 
-                  ? 'rgba(241, 245, 249, 0.7)' 
-                  : 'rgba(30, 41, 59, 0.7)',
-                padding: 0.5,
-                '&:hover': {
-                  color: mode === 'dark' ? '#ffffff' : '#1f293b',
-                  background: 'transparent',
-                }
-              }}
-            >
-              <ExpandMore fontSize="small" />
-            </IconButton>
-          </Box>
-        )}
+      {/* Minimal User Profile Section */}
+<Box
+  sx={{
+    p: 2,
+    borderTop: mode === "dark"
+      ? "1px solid rgba(255,255,255,0.08)"
+      : "1px solid rgba(0,0,0,0.08)",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    transition: "all 0.2s ease",
+  }}
+>
+  {/* Left side: Avatar + Info */}
+  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+    {/* Avatar with subtle gradient ring and online dot */}
+    <Box sx={{ position: "relative" }}>
+      <Box
+        sx={{
+          p: 0.5,
+          borderRadius: "50%",
+          background:
+            mode === "dark"
+              ? "linear-gradient(135deg, rgba(99,102,241,0.5), rgba(168,85,247,0.4))"
+              : "linear-gradient(135deg, rgba(59,130,246,0.25), rgba(99,102,241,0.15))",
+        }}
+      >
+        <Avatar
+          sx={{
+            width: 36,
+            height: 36,
+            fontSize: 14,
+            fontWeight: 700,
+            bgcolor: mode === "dark" ? "#111827" : "#ffffff",
+            color: mode === "dark" ? "#e5e7eb" : "#1f2937",
+            boxShadow: mode === "dark" ? "0 0 0 2px #0b1220" : "0 0 0 2px #fff",
+          }}
+        >
+          {user?.name?.charAt(0)?.toUpperCase()}
+        </Avatar>
       </Box>
+      <Box
+        sx={{
+          position: "absolute",
+          right: 2,
+          bottom: 2,
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          bgcolor: "#22c55e",
+          boxShadow: "0 0 0 2px rgba(0,0,0,0.6)",
+        }}
+      />
+    </Box>
+
+    <Box sx={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 700,
+            fontSize: 13,
+            color: mode === "dark" ? "#f8fafc" : "#0f172a",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {user?.name || "User"}
+        </Typography>
+      </Box>
+      <Typography
+        variant="caption"
+        sx={{
+          fontSize: 11,
+          color: mode === "dark" ? "#94a3b8" : "#6b7280",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+        }}
+        title={user?.email || "user@example.com"}
+      >
+        {user?.email || "user@example.com"}
+      </Typography>
+    </Box>
+  </Box>
+
+  {/* Right side: Dropdown / Actions */}
+  <IconButton
+    size="small"
+    onClick={onProfileMenuOpen}
+    sx={{
+      color: mode === "dark" ? "#9ca3af" : "#6b7280",
+      "&:hover": {
+        color: mode === "dark" ? "#fff" : "#111827",
+      },
+    }}
+  >
+    <ExpandMore fontSize="small" />
+  </IconButton>
+</Box>
+
     </Box>
   );
 

@@ -81,6 +81,19 @@ export const useColumnToggle = ({
     saveColumns(defaultCols);
   }, [initializeColumns, saveColumns]);
 
+  // Apply a set of visible column ids; others become hidden unless required
+  const applyVisibleColumns = useCallback((visibleIds: string[]) => {
+    setColumns(prev => {
+      const idSet = new Set(visibleIds);
+      const newColumns = prev.map(col => ({
+        ...col,
+        visible: col.required ? true : idSet.has(col.id)
+      }));
+      saveColumns(newColumns);
+      return newColumns;
+    });
+  }, [saveColumns]);
+
   const visibleColumns = useMemo(() => 
     columns.filter(col => col.visible), 
     [columns]
@@ -99,6 +112,7 @@ export const useColumnToggle = ({
     selectAllColumns,
     selectNoneColumns,
     resetToDefault,
+    applyVisibleColumns,
   };
 };
 
