@@ -733,8 +733,9 @@ const SalesReportPage: React.FC = () => {
                       <TableCell>Customer</TableCell>
                       <TableCell>Container</TableCell>
                       <TableCell>Product</TableCell>
+                      <TableCell>Rate</TableCell>
+                      <TableCell>Quantity</TableCell>
                       <TableCell>Amount</TableCell>
-                      <TableCell>Status</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -760,21 +761,16 @@ const SalesReportPage: React.FC = () => {
                             <TableCell>{sale.customer}</TableCell>
                             <TableCell>{sale.containerNo}</TableCell>
                             <TableCell>{sale.product}</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(sale.rate || 0)}</TableCell>
+                            <TableCell>{sale.quantity || 0}</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>{formatCurrency(sale.amount)}</TableCell>
-                            <TableCell>
-                              <Chip
-                                label={sale.status ? sale.status.replace('_', ' ').toUpperCase() : 'N/A'}
-                                color={getStatusColor(sale.status) as any}
-                                size="small"
-                              />
-                            </TableCell>
                           </TableRow>
                           
                           {/* Transaction Rows (expand/collapse) */}
                           {expandedSaleIds.includes(sale._id) && salePayments.length > 0 && (
                             <>
                               <TableRow>
-                                <TableCell colSpan={7} sx={{ py: 1, px: 3 }}>
+                                <TableCell colSpan={8} sx={{ py: 1, px: 3 }}>
                                   <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                     → Transactions:
                                   </Typography>
@@ -800,6 +796,7 @@ const SalesReportPage: React.FC = () => {
                                      <TableCell sx={{ pl: 6 }}>{payment.paymentType || 'N/A'}</TableCell>
                                      <TableCell sx={{ pl: 6 }}>{payment.reference || 'N/A'}</TableCell>
                                      <TableCell sx={{ pl: 6 }}>{payment.notes || 'N/A'}</TableCell>
+                                     <TableCell sx={{ pl: 6 }}>-</TableCell>
                                    </TableRow>
                                  );
                                })}
