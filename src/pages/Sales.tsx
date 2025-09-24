@@ -55,7 +55,7 @@ import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Snackbar } from '@mui/material';
 import apiService from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sales } from '../types';
 import BeautifulRefreshButton from '../components/BeautifulRefreshButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -90,6 +90,8 @@ const SalesPage: React.FC = () => {
   const [saleToDelete, setSaleToDelete] = useState<Sales | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [hydratedFromUrl, setHydratedFromUrl] = useState(false);
   const { mode } = useAppTheme();
   const { user } = useAuth();
   const [searchInput, setSearchInput] = useState('');
@@ -524,23 +526,49 @@ const SalesPage: React.FC = () => {
   // Use sales directly since filtering is now done on the server
   const paginatedSales = sales;
 
+  // On first mount, hydrate state from URL params if present, then mark hydrated
   useEffect(() => {
-    fetchSales();
-    fetchCustomers();
-    
-    // Check if we're coming from creating a new sale
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('newSale') === 'true') {
-      setShowSuccessNotification(true);
-      // Remove the parameter from URL
-      window.history.replaceState({}, document.title, window.location.pathname);
+    const qp = Object.fromEntries(searchParams.entries());
+    const nextFilters = { ...filters } as any;
+    let needUpdate = false;
+
+    // Hydrate filters
+    const map = ['customer','supplier','containerNo','product','status','startDate','endDate','dueStartDate','dueEndDate','minAmount','maxAmount','minOutstanding','maxOutstanding'] as const;
+    map.forEach((key) => {
+      if (qp[key] !== undefined) {
+        (nextFilters as any)[key] = qp[key] as string;
+        needUpdate = true;
+      }
+    });
+
+    // Hydrate search, pagination
+    if (qp.search) { setSearchQuery(qp.search); }
+    if (qp.page) { setPage(Math.max(0, parseInt(qp.page) || 0)); }
+    if (qp.rows) { setRowsPerPage(Math.max(1, parseInt(qp.rows) || 10)); }
+
+    if (needUpdate) {
+      setFilters(nextFilters);
+      setDebouncedFilters(nextFilters);
     }
+
+    // Mark hydrated before any fetches so other effects can run with correct state
+    setHydratedFromUrl(true);
+
+    fetchCustomers();
+
+    if (qp.newSale === 'true') {
+      setShowSuccessNotification(true);
+      searchParams.delete('newSale');
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refetch data when pagination changes
+  // Refetch data when pagination changes (only after hydration)
   useEffect(() => {
+    if (!hydratedFromUrl) return;
     fetchSales();
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, hydratedFromUrl]);
 
   // Refetch data when search or filters change
   // Debounce filters by 400ms to reduce fetch churn while typing
@@ -552,9 +580,29 @@ const SalesPage: React.FC = () => {
   }, [filters]);
 
   useEffect(() => {
+    if (!hydratedFromUrl) return;
     setPage(0);
     fetchSales();
-  }, [searchQuery, debouncedFilters]);
+  }, [searchQuery, debouncedFilters, hydratedFromUrl]);
+
+  // Initial fetch once hydrated (covers cases with no further changes)
+  useEffect(() => {
+    if (!hydratedFromUrl) return;
+    fetchSales();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydratedFromUrl]);
+
+  // Keep URL in sync with current filter/search/pagination state so that back navigation restores it
+  useEffect(() => {
+    const qp: any = {};
+    const f = debouncedFilters;
+    // Only write non-empty filters to keep URL short
+    Object.entries(f).forEach(([k, v]) => { if (v) qp[k] = v; });
+    if (searchQuery) qp.search = searchQuery;
+    if (page) qp.page = String(page);
+    if (rowsPerPage !== 10) qp.rows = String(rowsPerPage);
+    setSearchParams(qp, { replace: true });
+  }, [debouncedFilters, searchQuery, page, rowsPerPage, setSearchParams]);
 
   if (loading) {
     return (
