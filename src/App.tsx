@@ -55,6 +55,22 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
+// Restrict routes by role(s)
+const RoleRoute: React.FC<{ children: React.ReactNode; roles: Array<'admin' | 'employee'> } > = ({ children, roles }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+  if (loading) {
+    return <LoadingSpinner size="fullscreen" variant="spinner" message="Initializing application..." />;
+  }
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  if (!user || !roles.includes(user.role as any)) {
+    // If employee tries to access restricted pages, redirect to allowed entry point
+    return <Navigate to={user?.role === 'employee' ? '/sales/new' : '/dashboard'} />;
+  }
+  return <>{children}</>;
+};
+
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { theme } = useTheme();
@@ -68,171 +84,171 @@ const AppContent: React.FC = () => {
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Dashboard />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/executive-dashboard"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <ExecutiveDashboard />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/customers"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Customers />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/suppliers"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Suppliers />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/sales"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Sales />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/purchases"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Purchases />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/purchases/new"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <PurchaseDetails />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/purchases/:id"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <PurchaseView />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/purchases/:id/edit"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <PurchaseDetails />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/sales/new"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin','employee']}>
               <AppLayout>
                 <SaleDetails />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/sales/:id/edit"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <SaleDetails />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/sales/:id"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <SaleDetails />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/sales-report"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <SalesReport />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/purchase-report"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <PurchaseReport />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/customer-outstanding"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <CustomerOutstanding />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/daily-ledger"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <DailyLedger />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/users"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Users />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
@@ -248,197 +264,197 @@ const AppContent: React.FC = () => {
         <Route
           path="/settings"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Settings />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         {/* Freight Invoice Routes */}
         <Route
           path="/freight-invoices"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <FreightInvoices />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/freight-invoices/new"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <FreightInvoiceForm />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/freight-invoices/:id/edit"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <FreightInvoiceForm />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/freight-invoices/:id"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <FreightInvoiceDetails />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         {/* Transport Invoice Routes */}
         <Route
           path="/transport-invoices"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <TransportInvoices />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/transport-invoices/new"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <TransportInvoiceForm />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/transport-invoices/:id/edit"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <TransportInvoiceForm />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/transport-invoices/:id"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <TransportInvoiceDetails />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         {/* Dubai Transport Invoice Routes */}
         <Route
           path="/dubai-transport-invoices"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <DubaiTransportInvoices />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/dubai-transport-invoices/new"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <DubaiTransportInvoiceForm />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/dubai-transport-invoices/:id"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <DubaiTransportDetails />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/dubai-transport-invoices/:id/edit"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <DubaiTransportInvoiceForm />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         {/* Dubai Clearance Invoice Routes */}
         <Route
           path="/dubai-clearance-invoices"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <DubaiClearanceInvoices />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/dubai-clearance-invoices/:id"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <DubaiClearanceDetails />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/dubai-clearance-invoices/new"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <DubaiClearanceInvoiceForm />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route
           path="/dubai-clearance-invoices/:id/edit"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <DubaiClearanceInvoiceForm />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         {/* Statement Route */}
         <Route
           path="/statement"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Statement />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         {/* Notifications Route */}
         <Route
           path="/notifications"
           element={
-            <PrivateRoute>
+            <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Notifications />
               </AppLayout>
-            </PrivateRoute>
+            </RoleRoute>
           }
         />
         <Route path="/" element={<Navigate to="/dashboard" />} />

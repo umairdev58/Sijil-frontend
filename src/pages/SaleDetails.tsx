@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ceilToTwoDecimals } from '../lib/utils';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -285,17 +286,18 @@ const SaleDetails: React.FC = () => {
         const vatPercentage = field === 'vatPercentage' ? (value === '' ? 0 : value) : (prev.vatPercentage === '' ? 0 : prev.vatPercentage || 0);
         const discount = field === 'discount' ? (value === '' ? 0 : value) : (prev.discount === '' ? 0 : prev.discount || 0);
         
-        const subtotal = quantity * rate;
-        const vatAmount = (subtotal * vatPercentage) / 100;
-        const amount = subtotal + vatAmount - discount;
-        const outstandingAmount = amount - (prev.receivedAmount || 0);
+        const subtotal = ceilToTwoDecimals(Number(quantity) * Number(rate));
+        const vatAmount = ceilToTwoDecimals((subtotal * Number(vatPercentage)) / 100);
+        const amount = ceilToTwoDecimals(subtotal + vatAmount - Number(discount));
+        const outstandingAmount = ceilToTwoDecimals(amount - (Number(prev.receivedAmount) || 0));
         
         updatedSale.amount = amount;
         updatedSale.outstandingAmount = outstandingAmount;
+        updatedSale.vatAmount = vatAmount;
       }
       
       if (field === 'receivedAmount') {
-        updatedSale.outstandingAmount = (prev.amount || 0) - value;
+        updatedSale.outstandingAmount = ceilToTwoDecimals((prev.amount || 0) - Number(value));
       }
       
       return updatedSale;
@@ -732,7 +734,7 @@ const SaleDetails: React.FC = () => {
               fullWidth
               type="number"
               label="Subtotal (AED)"
-              value={((sale.quantity === '' ? 0 : sale.quantity || 0) * (sale.rate === '' ? 0 : sale.rate || 0)).toFixed(2)}
+              value={ceilToTwoDecimals((sale.quantity === '' ? 0 : sale.quantity || 0) * (sale.rate === '' ? 0 : sale.rate || 0))}
               InputProps={{ readOnly: true }}
               helperText="Quantity × Rate"
             />
@@ -740,7 +742,7 @@ const SaleDetails: React.FC = () => {
               fullWidth
               type="number"
               label="Final Amount (AED)"
-              value={sale.amount || 0}
+              value={ceilToTwoDecimals(sale.amount || 0)}
               InputProps={{ readOnly: true }}
               helperText="Subtotal + VAT - Discount"
             />
@@ -748,7 +750,7 @@ const SaleDetails: React.FC = () => {
               fullWidth
               type="number"
               label="Outstanding Amount (AED)"
-              value={sale.outstandingAmount || 0}
+              value={ceilToTwoDecimals(sale.outstandingAmount || 0)}
               InputProps={{ readOnly: true }}
               helperText="Auto-calculated"
             />

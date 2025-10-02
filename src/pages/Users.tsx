@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
   Alert,
-  CircularProgress,
   Paper,
+  Stack,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  MenuItem,
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { User } from '../types';
@@ -18,12 +25,16 @@ const Users: React.FC = () => {
     page: 0,
     pageSize: 10,
   });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'employee' as 'employee' | 'admin',
+  });
 
-  useEffect(() => {
-    fetchUsers();
-  }, [pagination.page, pagination.pageSize]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.getUsers(pagination.page + 1, pagination.pageSize);
@@ -36,6 +47,33 @@ const Users: React.FC = () => {
       setError('Failed to load users');
     } finally {
       setLoading(false);
+    }
+  }, [pagination.page, pagination.pageSize]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const handleCreateUser = async () => {
+    try {
+      setCreateLoading(true);
+      const res = await apiService.createUser({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+      });
+      if (res.success) {
+        setCreateOpen(false);
+        setForm({ name: '', email: '', password: '', role: 'employee' });
+        fetchUsers();
+      } else {
+        setError(res.message || 'Failed to create user');
+      }
+    } catch (e: any) {
+      setError(e.response?.data?.message || 'Failed to create user');
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -98,9 +136,12 @@ const Users: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Users
-      </Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Typography variant="h4">Users</Typography>
+        <Button variant="contained" onClick={() => setCreateOpen(true)}>
+          New User
+        </Button>
+      </Stack>
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -123,6 +164,27 @@ const Users: React.FC = () => {
           disableRowSelectionOnClick
         />
       </Paper>
+
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New User</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} fullWidth />
+            <TextField label="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} fullWidth />
+            <TextField label="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} fullWidth />
+            <TextField select label="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as any })} fullWidth>
+              <MenuItem value="employee">Employee</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
+            </TextField>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCreateOpen(false)} disabled={createLoading}>Cancel</Button>
+          <Button onClick={handleCreateUser} variant="contained" disabled={createLoading}>
+            {createLoading ? 'Creating...' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

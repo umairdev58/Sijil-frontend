@@ -27,6 +27,16 @@ export interface SalesFilterParams {
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
+// Payload for creating users (includes password which is not part of User type exposed to UI)
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  password: string;
+  department?: string;
+  position?: string;
+  role?: 'admin' | 'employee';
+}
+
 class ApiService {
   private api: AxiosInstance;
 
@@ -137,7 +147,7 @@ class ApiService {
     return response.data;
   }
 
-  async createUser(userData: Partial<User>): Promise<ApiResponse<User>> {
+  async createUser(userData: CreateUserPayload): Promise<ApiResponse<User>> {
     const response: AxiosResponse = await this.api.post('/users', userData);
     return response.data;
   }
@@ -1506,4 +1516,5 @@ class ApiService {
   }
 }
 
-export default new ApiService(); 
+const apiService = new ApiService();
+export default apiService;
