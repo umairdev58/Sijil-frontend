@@ -1072,10 +1072,14 @@ const SaleDetails: React.FC = () => {
                     }}
                     helperText={
                       sale?.outstandingAmount > 0 
-                        ? `Maximum: AED ${sale.outstandingAmount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}`
+                        ? `Amount + Discount must be <= AED ${sale.outstandingAmount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}`
                         : "This invoice is already fully paid"
                     }
-                    error={!!(paymentForm.amount && sale?.outstandingAmount > 0 && parseFloat(paymentForm.amount) > sale.outstandingAmount)}
+                    error={(() => {
+                      const amt = parseFloat(paymentForm.amount || '0') || 0;
+                      const disc = parseFloat(paymentForm.discount || '0') || 0;
+                      return sale?.outstandingAmount > 0 && (amt + disc) > sale.outstandingAmount;
+                    })()}
                   />
 
                   <FormControl fullWidth>
@@ -1130,6 +1134,11 @@ const SaleDetails: React.FC = () => {
                     fullWidth
                     inputProps={{ min: 0, step: 0.01 }}
                     placeholder="Optional discount amount"
+                    helperText={
+                      sale?.outstandingAmount > 0 
+                        ? `Amount + Discount must be <= AED ${sale.outstandingAmount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}`
+                        : undefined
+                    }
                   />
 
                   <TextField
@@ -1149,9 +1158,13 @@ const SaleDetails: React.FC = () => {
                     onClick={handleAddPayment}
                     disabled={
                       saving || 
-                      !paymentForm.amount || 
+                      (!(paymentForm.amount && parseFloat(paymentForm.amount) > 0) && !(paymentForm.discount && parseFloat(paymentForm.discount) > 0)) ||
                       sale?.outstandingAmount <= 0 ||
-                      !!(paymentForm.amount && sale?.outstandingAmount > 0 && parseFloat(paymentForm.amount) > sale.outstandingAmount)
+                      (() => {
+                        const amt = parseFloat(paymentForm.amount || '0') || 0;
+                        const disc = parseFloat(paymentForm.discount || '0') || 0;
+                        return sale?.outstandingAmount > 0 && (amt + disc) > sale.outstandingAmount;
+                      })()
                     }
                     startIcon={<PaymentIcon />}
                     sx={{
