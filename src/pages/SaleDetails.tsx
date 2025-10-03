@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ceilToTwoDecimals } from '../lib/utils';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -141,6 +141,14 @@ const SaleDetails: React.FC = () => {
   const isAddPaymentMode = urlParams.get('mode') === 'addPayment';
   const { mode } = useAppTheme();
   const { user } = useAuth();
+
+  const totalDiscount = useMemo(() => {
+    try {
+      return (payments || []).reduce((sum, p) => sum + (Number(p?.discount) || 0), 0);
+    } catch {
+      return 0;
+    }
+  }, [payments]);
 
   const runValidation = (): boolean => {
     const errors: Record<string, string> = {};
@@ -420,6 +428,16 @@ const SaleDetails: React.FC = () => {
         if (payRes.success && payRes.payments) {
           setPayments(payRes.payments);
         }
+        // Update sale totals/outstanding using API response to reflect discount and payments
+        if ((response as any).sale) {
+          setSale((response as any).sale);
+        } else {
+          // Fallback: refetch sale if not present
+          try {
+            const saleRes = await apiService.getSale(id!);
+            if (saleRes.success && saleRes.sale) setSale(saleRes.sale);
+          } catch {}
+        }
         setPaymentForm({
           amount: '',
           paymentType: 'partial' as 'partial' | 'full',
@@ -464,6 +482,15 @@ const SaleDetails: React.FC = () => {
       const response = await apiService.deletePayment(id!, paymentToDelete._id!, deletePaymentPassword);
       if (response.success) {
         setPayments(response.payments || []);
+        // Update sale with recalculated amounts after deletion
+        if ((response as any).sale) {
+          setSale((prev: any) => ({ ...prev, ...(response as any).sale }));
+        } else {
+          try {
+            const saleRes = await apiService.getSale(id!);
+            if (saleRes.success && saleRes.sale) setSale(saleRes.sale);
+          } catch {}
+        }
         setDeletePaymentDialogOpen(false);
         setPaymentToDelete(null);
         setDeletePaymentPassword('');
@@ -1059,17 +1086,13 @@ const SaleDetails: React.FC = () => {
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 3 }}>
                   <TextField
                     label="Amount (AED)"
-                    type="number"
+                    type="text"
                     value={paymentForm.amount}
                     onChange={(e) => handlePaymentInputChange('amount', e.target.value)}
                     fullWidth
                     required
                     disabled={sale?.outstandingAmount <= 0}
-                    inputProps={{ 
-                      min: 0, 
-                      max: sale?.outstandingAmount || 0,
-                      step: 0.01 
-                    }}
+                    inputProps={{ inputMode: 'decimal', pattern: '[0-9]*[.,]?[0-9]*' }}
                     helperText={
                       sale?.outstandingAmount > 0 
                         ? `Amount + Discount must be <= AED ${sale.outstandingAmount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}`
@@ -1128,11 +1151,11 @@ const SaleDetails: React.FC = () => {
 
                   <TextField
                     label="Discount (AED)"
-                    type="number"
+                    type="text"
                     value={paymentForm.discount}
                     onChange={(e) => handlePaymentInputChange('discount', e.target.value)}
                     fullWidth
-                    inputProps={{ min: 0, step: 0.01 }}
+                    inputProps={{ inputMode: 'decimal', pattern: '[0-9]*[.,]?[0-9]*' }}
                     placeholder="Optional discount amount"
                     helperText={
                       sale?.outstandingAmount > 0 
@@ -1238,7 +1261,7 @@ const SaleDetails: React.FC = () => {
                 </ListItem>
                 <ListItem>
                   <ListItemText
-                    primary={`AED ${sale.discount?.toLocaleString()}`}
+                    primary={`AED ${totalDiscount.toLocaleString()}`}
                     secondary="Discount"
                   />
                 </ListItem>
