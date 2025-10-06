@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Button,
@@ -14,6 +14,8 @@ import {
   Chip,
   Switch,
   FormControlLabel,
+  Paper,
+  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -22,8 +24,22 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridActionsCellItem } from '@mui/x-data-grid';
+import { styled } from '@mui/material/styles';
 import { Customer } from '../types';
 import apiService from '../services/api';
+
+const PageContainer = styled(Box)(({ theme }) => ({
+  minHeight: '100vh',
+  padding: theme.spacing(3),
+}));
+
+const ToolbarPaper = styled(Paper)(({ theme }) => ({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  padding: theme.spacing(2),
+  borderRadius: 8,
+}));
 
 const Customers: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -45,6 +61,13 @@ const Customers: React.FC = () => {
     trn: '',
     isActive: true,
   });
+
+  const stats = useMemo(() => {
+    const total = customers.length;
+    const active = customers.filter((c) => c?.isActive).length;
+    const inactive = total - active;
+    return { total, active, inactive };
+  }, [customers]);
 
   useEffect(() => {
     fetchCustomers();
@@ -238,16 +261,17 @@ const Customers: React.FC = () => {
   ];
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Customers</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleAdd}
-        >
-          Add Customer
-        </Button>
+    <PageContainer>
+      <Box display="flex" alignItems="baseline" justifyContent="space-between" mb={2}>
+        <Box>
+          <Typography variant="h4" fontWeight={800}>Customers</Typography>
+          <Typography variant="body2" color="text.secondary">Manage your customer directory and TRN details</Typography>
+        </Box>
+        <Box display="flex" gap={1}>
+          <Chip label={`Total: ${stats.total}`} color="primary" variant="outlined" />
+          <Chip label={`Active: ${stats.active}`} color="success" variant="outlined" />
+          <Chip label={`Inactive: ${stats.inactive}`} variant="outlined" />
+        </Box>
       </Box>
 
       {error && (
@@ -256,24 +280,29 @@ const Customers: React.FC = () => {
         </Alert>
       )}
 
-      <Box display="flex" gap={2} mb={3}>
+      <ToolbarPaper elevation={0} sx={{ mb: 3 }}>
         <TextField
-          placeholder="Search customers..."
+          placeholder="Search customers by name, email or TRN..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           sx={{ flexGrow: 1 }}
+          size="small"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" />
+              </InputAdornment>
+            )
+          }}
         />
-        <Button
-          variant="outlined"
-          startIcon={<SearchIcon />}
-          onClick={handleSearch}
-        >
-          Search
-        </Button>
-      </Box>
+        <Box display="flex" gap={1}>
+          <Button variant="outlined" onClick={handleSearch} startIcon={<SearchIcon />}>Search</Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>Add Customer</Button>
+        </Box>
+      </ToolbarPaper>
 
-      <Box sx={{ height: 600, width: '100%' }}>
+      <Paper sx={{ height: 600, width: '100%', borderRadius: 8, overflow: 'hidden' }} elevation={0}>
         <DataGrid
           rows={customers}
           columns={columns}
@@ -286,11 +315,23 @@ const Customers: React.FC = () => {
           pageSizeOptions={[10, 25, 50]}
           getRowId={(row) => row._id}
           disableRowSelectionOnClick
+          sx={{
+            border: 'none',
+            '& .MuiDataGrid-columnHeaders': {
+              bgcolor: 'action.hover',
+              fontWeight: 700,
+            },
+            '& .MuiDataGrid-row:hover': {
+              bgcolor: 'action.hover',
+            },
+          }}
         />
-      </Box>
+      </Paper>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth
+        PaperProps={{ sx: { borderRadius: 8 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>
           {editingCustomer ? 'Edit Customer' : 'Add Customer'}
         </DialogTitle>
         <DialogContent>
@@ -345,7 +386,7 @@ const Customers: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </PageContainer>
   );
 };
 
