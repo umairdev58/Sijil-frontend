@@ -488,7 +488,7 @@ const SalesPage: React.FC = () => {
             <Tooltip title="Print Invoice">
               <IconButton
                 size="small"
-                onClick={() => window.open(`/api/sales/${sale._id}/print`, '_blank')}
+                onClick={() => apiService.printInvoice(sale._id)}
               >
                 <PrintIcon />
               </IconButton>
