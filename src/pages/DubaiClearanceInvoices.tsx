@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -119,12 +119,7 @@ const DubaiClearanceInvoices: React.FC = () => {
   const [reportGroupBy, setReportGroupBy] = useState<'none' | 'agent' | 'status' | 'month'>('none');
   const [includePayments, setIncludePayments] = useState(true);
 
-  useEffect(() => {
-    load();
-    loadStats();
-  }, [pagination.page, pagination.limit]);
-
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiService.getDubaiClearanceInvoices(
@@ -149,9 +144,9 @@ const DubaiClearanceInvoices: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, search, status, agent, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const res = await apiService.getDubaiClearanceInvoiceStats();
       if (res.success) {
@@ -160,7 +155,12 @@ const DubaiClearanceInvoices: React.FC = () => {
     } catch (e: any) {
       console.error('Failed to load stats:', e);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    load();
+    loadStats();
+  }, [load, loadStats]);
 
   const handleSearch = () => {
     setPagination(prev => ({ ...prev, page: 1 }));

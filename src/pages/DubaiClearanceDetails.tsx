@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -116,14 +116,7 @@ const DubaiClearanceDetails: React.FC = () => {
   const [paymentNote, setPaymentNote] = useState('');
   const [paymentType, setPaymentType] = useState<'partial' | 'full'>('partial');
 
-  useEffect(() => {
-    if (id) {
-      fetchInvoice();
-      fetchPayments();
-    }
-  }, [id]);
-
-  const fetchInvoice = async () => {
+  const fetchInvoice = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.getDubaiClearanceInvoice(id!);
@@ -137,9 +130,9 @@ const DubaiClearanceDetails: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     try {
       const response = await apiService.getDubaiClearancePaymentHistory(id!);
       if (response.success && response.data) {
@@ -148,7 +141,14 @@ const DubaiClearanceDetails: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to fetch payments:', err);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchInvoice();
+      fetchPayments();
+    }
+  }, [id, fetchInvoice, fetchPayments]);
 
   const handleAddPayment = async () => {
     if (!paymentAmount || parseFloat(paymentAmount) <= 0) {

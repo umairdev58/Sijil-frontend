@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -24,7 +24,6 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import { styled } from '@mui/material/styles';
 import apiService from '../services/api';
-import { DubaiClearanceInvoice } from '../types';
 
 const DubaiClearanceInvoiceForm: React.FC = () => {
   const navigate = useNavigate();
@@ -50,13 +49,7 @@ const DubaiClearanceInvoiceForm: React.FC = () => {
     return rate > 0 ? aed * rate : 0;
   }, [formData.amount_aed, formData.conversion_rate]);
 
-  useEffect(() => {
-    if (isEditing) {
-      loadInvoice();
-    }
-  }, [id]);
-
-  const loadInvoice = async () => {
+  const loadInvoice = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiService.getDubaiClearanceInvoice(id!);
@@ -75,7 +68,13 @@ const DubaiClearanceInvoiceForm: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (isEditing) {
+      loadInvoice();
+    }
+  }, [isEditing, loadInvoice]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
