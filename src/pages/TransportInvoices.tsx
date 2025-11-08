@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -43,8 +43,6 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Money as MoneyIcon,
-  Download as DownloadIcon,
-  Visibility as ViewIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
@@ -119,17 +117,7 @@ const TransportInvoices: React.FC = () => {
   const [reportGroupBy, setReportGroupBy] = useState<'none' | 'agent' | 'status' | 'month'>('none');
   const [includePayments, setIncludePayments] = useState(true);
 
-  useEffect(() => {
-    load();
-  }, [page, rowsPerPage, search, statusFilter, agentFilter, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
-
-  useEffect(() => {
-    if (location.search.includes('newInvoice=true')) {
-      setSuccess('Transport invoice created successfully!');
-    }
-  }, [location]);
-
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiService.getTransportInvoices(
@@ -154,7 +142,17 @@ const TransportInvoices: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, search, statusFilter, agentFilter, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (location.search.includes('newInvoice=true')) {
+      setSuccess('Transport invoice created successfully!');
+    }
+  }, [location]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this invoice?')) return;
@@ -197,22 +195,6 @@ const TransportInvoices: React.FC = () => {
       }
     } catch (e: any) {
       setError(e?.message || 'Failed to add payment');
-    }
-  };
-
-  const handleViewPaymentHistory = async (invoice: TransportInvoice) => {
-    try {
-      setHistoryLoading(true);
-      const res = await apiService.getTransportPaymentHistory(invoice._id);
-      if (res.success) {
-        setPaymentHistory(res.data || []);
-        setSelectedInvoice(invoice);
-        setHistoryDialogOpen(true);
-      }
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load payment history');
-    } finally {
-      setHistoryLoading(false);
     }
   };
 

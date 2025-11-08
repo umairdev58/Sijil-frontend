@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -21,7 +21,6 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useNavigate, useParams } from 'react-router-dom';
 import apiService from '../services/api';
-import { TransportInvoice } from '../types';
 import { styled } from '@mui/material/styles';
 
 const TransportInvoiceForm: React.FC = () => {
@@ -49,13 +48,7 @@ const TransportInvoiceForm: React.FC = () => {
     return rate > 0 ? pkr / rate : 0;
   }, [formData.amount_pkr, formData.conversion_rate]);
 
-  useEffect(() => {
-    if (isEditing) {
-      loadInvoice();
-    }
-  }, [id]);
-
-  const loadInvoice = async () => {
+  const loadInvoice = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiService.getTransportInvoice(id!);
@@ -74,7 +67,13 @@ const TransportInvoiceForm: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (isEditing) {
+      loadInvoice();
+    }
+  }, [isEditing, loadInvoice]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
