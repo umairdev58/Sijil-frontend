@@ -79,9 +79,10 @@ const ExecutiveDashboard: React.FC = () => {
     return new Intl.NumberFormat('en-US').format(num);
   };
 
-  const formatPercentage = (num: number) => {
-    return `${num > 0 ? '+' : ''}${num.toFixed(1)}%`;
-  };
+  // Unused function - commented out
+  // const formatPercentage = (num: number) => {
+  //   return `${num > 0 ? '+' : ''}${num.toFixed(1)}%`;
+  // };
 
   return (
     <DashboardLayout

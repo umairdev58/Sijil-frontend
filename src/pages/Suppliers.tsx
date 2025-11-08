@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Alert, Chip, Switch, FormControlLabel } from '@mui/material';
 import { DataGrid, GridActionsCellItem, GridColDef } from '@mui/x-data-grid';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon } from '@mui/icons-material';
@@ -23,11 +23,7 @@ const Suppliers: React.FC = () => {
     isActive: true,
   });
 
-  useEffect(() => {
-    fetchSuppliers();
-  }, [pagination.page, pagination.pageSize]);
-
-  const fetchSuppliers = async () => {
+  const fetchSuppliers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.getSuppliers(pagination.page + 1, pagination.pageSize);
@@ -42,7 +38,11 @@ const Suppliers: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.pageSize]);
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -49,13 +49,7 @@ const FreightInvoiceForm: React.FC = () => {
     return rate > 0 ? pkr / rate : 0;
   }, [formData.amount_pkr, formData.conversion_rate]);
 
-  useEffect(() => {
-    if (isEditing) {
-      loadInvoice();
-    }
-  }, [id]);
-
-  const loadInvoice = async () => {
+  const loadInvoice = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiService.getFreightInvoice(id!);
@@ -74,7 +68,13 @@ const FreightInvoiceForm: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (isEditing) {
+      loadInvoice();
+    }
+  }, [isEditing, loadInvoice]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

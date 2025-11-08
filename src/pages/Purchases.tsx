@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -53,7 +53,19 @@ const PurchasesPage: React.FC = () => {
   const [searchInput, setSearchInput] = useState('');
   const navigate = useNavigate();
 
-  const load = async () => {
+  // Auto-search with debouncing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== search) {
+        setSearch(searchInput.trim());
+        setPage(0);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
+
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiService.getPurchases(page + 1, rowsPerPage, search);
@@ -66,21 +78,11 @@ const PurchasesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, search]);
 
-  // Auto-search with debouncing
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput !== search) {
-        setSearch(searchInput.trim());
-        setPage(0);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  useEffect(() => { load(); }, [page, rowsPerPage, search]);
+    load();
+  }, [load]);
 
   // Show success after creating a purchase
   useEffect(() => {

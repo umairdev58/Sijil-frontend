@@ -42,10 +42,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const { mode } = useTheme();
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, refreshNotifications } = useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, refreshNotifications } = useNotifications();
 
   const currentTitle = useMemo(() => {
     const path = window.location.pathname;

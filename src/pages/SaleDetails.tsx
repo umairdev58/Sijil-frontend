@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { ceilToTwoDecimals } from '../lib/utils';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -19,7 +19,6 @@ import {
   ListItemIcon,
   IconButton,
   Tooltip,
-  Grid,
   TextField,
   MenuItem,
   FormControl,
@@ -47,7 +46,6 @@ import {
   Cancel as CancelIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Add as AddIcon
 } from '@mui/icons-material';
 import apiService from '../services/api';
 import WarningDialog from '../components/ui/WarningDialog';
@@ -169,9 +167,8 @@ const SaleDetails: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (isNewSale) {
+  const fetchData = useCallback(async () => {
+    if (isNewSale) {
         const today = new Date().toISOString().split('T')[0];
         const tenDaysLater = (() => { const d = new Date(); d.setDate(d.getDate() + 10); return d.toISOString().split('T')[0]; })();
         setSale({
@@ -198,51 +195,52 @@ const SaleDetails: React.FC = () => {
         return;
       }
 
-      if (!id || id === 'new') {
-        setError('Invalid sale ID');
-        setLoading(false);
-        return;
+    if (!id || id === 'new') {
+      setError('Invalid sale ID');
+      setLoading(false);
+      return;
+    }
+
+    if (!isValidObjectId(id)) {
+      setError('Invalid sale ID format');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [saleRes, payRes] = await Promise.all([
+        apiService.getSale(id),
+        apiService.getPaymentHistory(id)
+      ]);
+
+      if (saleRes.success && saleRes.sale) {
+        setSale(saleRes.sale);
+      } else {
+        setError('Failed to load sale data');
       }
 
-      if (!isValidObjectId(id)) {
-        setError('Invalid sale ID format');
-        setLoading(false);
-        return;
+      if (payRes.success && payRes.payments) {
+        setPayments(payRes.payments);
       }
+    } catch (err) {
+      setError('Failed to load sale details');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, isNewSale]);
 
-      setLoading(true);
-      setError(null);
-
-      try {
-        const [saleRes, payRes] = await Promise.all([
-          apiService.getSale(id),
-          apiService.getPaymentHistory(id)
-        ]);
-
-        if (saleRes.success && saleRes.sale) {
-          setSale(saleRes.sale);
-        } else {
-          setError('Failed to load sale data');
-        }
-
-        if (payRes.success && payRes.payments) {
-          setPayments(payRes.payments);
-        }
-      } catch (err) {
-        setError('Failed to load sale details');
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchData();
-  }, [id]);
+  }, [fetchData]);
 
   useEffect(() => {
     if (isAddPaymentMode) {
       setShowPaymentForm(true);
     }
-  }, [isAddPaymentMode]);
+  }, [isAddPaymentMode, isNewSale]);
 
   useEffect(() => {
     const loadLookups = async () => {

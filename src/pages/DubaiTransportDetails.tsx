@@ -1,23 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
-  Paper,
   Chip,
   Button,
   Stack,
   Divider,
   CircularProgress,
-  Avatar,
   Card,
   CardContent,
   List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   IconButton,
-  Tooltip,
   TextField,
   MenuItem,
   FormControl,
@@ -33,29 +27,18 @@ import {
 import {
   ArrowBack as ArrowBackIcon,
   Payment as PaymentIcon,
-  Receipt as ReceiptIcon,
-  CalendarToday as DateIcon,
-  Person as PersonIcon,
-  LocalShipping as ShippingIcon,
-  Description as DescriptionIcon,
-  AttachMoney as MoneyIcon,
   CheckCircle as CheckIcon,
   Pending as PendingIcon,
   Error as ErrorIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-  Edit as EditIcon,
-  Add as AddIcon,
-  Close as CloseIcon
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import apiService from '../services/api';
 import { DubaiTransportInvoice, DubaiTransportPayment } from '../types';
 import { styled } from '@mui/material/styles';
-import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 
 const StatusChip = styled(Chip)(({ theme }) => ({
   fontWeight: 600,
@@ -102,7 +85,6 @@ const PaymentCard = styled(Card)(({ theme }) => ({
 const DubaiTransportDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { mode } = useAppTheme();
   const [invoice, setInvoice] = useState<DubaiTransportInvoice | null>(null);
   const [payments, setPayments] = useState<DubaiTransportPayment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,14 +98,7 @@ const DubaiTransportDetails: React.FC = () => {
   const [paymentNote, setPaymentNote] = useState('');
   const [paymentType, setPaymentType] = useState<'partial' | 'full'>('partial');
 
-  useEffect(() => {
-    if (id) {
-      fetchInvoice();
-      fetchPayments();
-    }
-  }, [id]);
-
-  const fetchInvoice = async () => {
+  const fetchInvoice = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.getDubaiTransportInvoice(id!);
@@ -137,9 +112,9 @@ const DubaiTransportDetails: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     try {
       const response = await apiService.getDubaiTransportPaymentHistory(id!);
       if (response.success && response.data) {
@@ -148,7 +123,14 @@ const DubaiTransportDetails: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to fetch payments:', err);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchInvoice();
+      fetchPayments();
+    }
+  }, [id, fetchInvoice, fetchPayments]);
 
   const handleAddPayment = async () => {
     if (!paymentAmount || parseFloat(paymentAmount) <= 0) {

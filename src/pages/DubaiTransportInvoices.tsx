@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -30,15 +30,12 @@ import {
   Tooltip,
   Pagination,
   Accordion,
-  AccordionSummary,
   AccordionDetails,
   ToggleButtonGroup,
   ToggleButton,
   InputAdornment,
-  Divider,
   Snackbar,
   LinearProgress,
-  TablePagination,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -51,12 +48,8 @@ import {
   Schedule as ScheduleIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
   Assessment as AssessmentIcon,
-  ExpandMore as ExpandMoreIcon,
-  Download as DownloadIcon,
   Print as PrintIcon,
   Money as MoneyIcon,
-  Warning as WarningIcon,
-  Error as ErrorIcon,
   TrendingUp as TrendingUpIcon,
   AccountBalance as AccountBalanceIcon,
   Receipt as ReceiptIcon,
@@ -68,11 +61,10 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { styled, useTheme } from '@mui/material/styles';
 import apiService from '../services/api';
-import { DubaiTransportInvoice, DubaiTransportPayment } from '../types';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { DubaiTransportInvoice } from '../types';
 
 const DubaiTransportInvoices: React.FC = () => {
   const theme = useTheme();
@@ -82,7 +74,7 @@ const DubaiTransportInvoices: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
-  const [stats, setStats] = useState<any>(null);
+  const [, setStats] = useState<any>(null);
 
   // Filter states
   const [search, setSearch] = useState('');
@@ -119,12 +111,7 @@ const DubaiTransportInvoices: React.FC = () => {
   const [reportGroupBy, setReportGroupBy] = useState<'none' | 'agent' | 'status' | 'month'>('none');
   const [includePayments, setIncludePayments] = useState(true);
 
-  useEffect(() => {
-    load();
-    loadStats();
-  }, [pagination.page, pagination.limit]);
-
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiService.getDubaiTransportInvoices(
@@ -149,9 +136,9 @@ const DubaiTransportInvoices: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, search, status, agent, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const res = await apiService.getDubaiTransportInvoiceStats();
       if (res.success) {
@@ -160,7 +147,12 @@ const DubaiTransportInvoices: React.FC = () => {
     } catch (e: any) {
       console.error('Failed to load stats:', e);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    load();
+    loadStats();
+  }, [load, loadStats]);
 
   const handleSearch = () => {
     setPagination(prev => ({ ...prev, page: 1 }));

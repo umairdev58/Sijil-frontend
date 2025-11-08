@@ -3,21 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
-  Paper,
   Chip,
   Button,
   Stack,
   Divider,
   CircularProgress,
-  Avatar,
   Card,
   CardContent,
   List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   IconButton,
-  Tooltip,
   TextField,
   MenuItem,
   FormControl,
@@ -33,29 +27,18 @@ import {
 import {
   ArrowBack as ArrowBackIcon,
   Payment as PaymentIcon,
-  Receipt as ReceiptIcon,
-  CalendarToday as DateIcon,
-  Person as PersonIcon,
-  LocalShipping as ShippingIcon,
-  Description as DescriptionIcon,
-  AttachMoney as MoneyIcon,
   CheckCircle as CheckIcon,
   Pending as PendingIcon,
   Error as ErrorIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
-  Edit as EditIcon,
-  Add as AddIcon,
-  Close as CloseIcon
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import apiService from '../services/api';
 import { DubaiClearanceInvoice, DubaiClearancePayment } from '../types';
 import { styled } from '@mui/material/styles';
-import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 
 const StatusChip = styled(Chip)(({ theme }) => ({
   fontWeight: 600,
@@ -102,7 +85,6 @@ const PaymentCard = styled(Card)(({ theme }) => ({
 const DubaiClearanceDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { mode } = useAppTheme();
   const [invoice, setInvoice] = useState<DubaiClearanceInvoice | null>(null);
   const [payments, setPayments] = useState<DubaiClearancePayment[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -6,7 +6,6 @@ import {
   Chip,
   Button,
   Stack,
-  Divider,
   CircularProgress,
   Alert,
   Card,
@@ -39,11 +38,9 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
   Download as DownloadIcon,
-  Refresh as RefreshIcon,
   Payment as PaymentIcon,
   Print as PrintIcon,
   Clear as ClearIcon,
@@ -64,7 +61,7 @@ import { useColumnToggle } from '../hooks/useColumnToggle';
 
 const SalesPage: React.FC = () => {
   const [sales, setSales] = useState<Sales[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalSalesCount, setTotalSalesCount] = useState(0);
@@ -196,32 +193,34 @@ const SalesPage: React.FC = () => {
 
   // Use overall statistics from backend instead of calculating from current page data
 
-  const getStatusBadge = (status: string | undefined | null) => {
-    if (!status) {
-      return <Chip label="Unknown" color="default" size="small" />;
-    }
-    
-    switch (status.toLowerCase()) {
-      case "paid":
-        return <Chip label="Paid" color="success" size="small" />;
-      case "partially_paid":
-        return <Chip label="Partially Paid" color="warning" size="small" />;
-      case "unpaid":
-        return <Chip label="Unpaid" color="info" size="small" />;
-      case "overdue":
-        return <Chip label="Overdue" color="error" size="small" />;
-      default:
-        return <Chip label={status} color="default" size="small" />;
-    }
-  };
+  // Unused function - commented out
+  // const getStatusBadge = (status: string | undefined | null) => {
+  //   if (!status) {
+  //     return <Chip label="Unknown" color="default" size="small" />;
+  //   }
+  //   
+  //   switch (status.toLowerCase()) {
+  //     case "paid":
+  //       return <Chip label="Paid" color="success" size="small" />;
+  //     case "partially_paid":
+  //       return <Chip label="Partially Paid" color="warning" size="small" />;
+  //     case "unpaid":
+  //       return <Chip label="Unpaid" color="info" size="small" />;
+  //     case "overdue":
+  //       return <Chip label="Overdue" color="error" size="small" />;
+  //     default:
+  //       return <Chip label={status} color="default" size="small" />;
+  //   }
+  // };
 
-  const toggleRowExpansion = (saleId: string) => {
-    setExpandedRows((prev) => 
-      prev.includes(saleId) 
-        ? prev.filter((id) => id !== saleId) 
-        : [...prev, saleId]
-    );
-  };
+  // Unused function - commented out
+  // const toggleRowExpansion = (saleId: string) => {
+  //   setExpandedRows((prev) => 
+  //     prev.includes(saleId) 
+  //       ? prev.filter((id) => id !== saleId) 
+  //       : [...prev, saleId]
+  //   );
+  // };
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -232,7 +231,7 @@ const SalesPage: React.FC = () => {
     setPage(0);
   };
 
-  const fetchSales = async () => {
+  const fetchSales = useCallback(async () => {
     try {
       setLoading(true);
       const apiFilters: any = {
@@ -284,7 +283,7 @@ const SalesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, searchQuery, filters]);
 
   const fetchCustomers = async () => {
     try {
@@ -568,7 +567,7 @@ const SalesPage: React.FC = () => {
   useEffect(() => {
     if (!hydratedFromUrl) return;
     fetchSales();
-  }, [page, rowsPerPage, hydratedFromUrl]);
+  }, [page, rowsPerPage, hydratedFromUrl, fetchSales]);
 
   // Refetch data when search or filters change
   // Debounce filters by 400ms to reduce fetch churn while typing
@@ -583,14 +582,13 @@ const SalesPage: React.FC = () => {
     if (!hydratedFromUrl) return;
     setPage(0);
     fetchSales();
-  }, [searchQuery, debouncedFilters, hydratedFromUrl]);
+  }, [searchQuery, debouncedFilters, hydratedFromUrl, fetchSales]);
 
   // Initial fetch once hydrated (covers cases with no further changes)
   useEffect(() => {
     if (!hydratedFromUrl) return;
     fetchSales();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydratedFromUrl]);
+  }, [hydratedFromUrl, fetchSales]);
 
   // Keep URL in sync with current filter/search/pagination state so that back navigation restores it
   useEffect(() => {

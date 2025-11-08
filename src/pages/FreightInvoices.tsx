@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -43,8 +43,6 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Money as MoneyIcon,
-  Download as DownloadIcon,
-  Visibility as ViewIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   CheckCircleOutline as CheckCircleOutlineIcon,
@@ -73,7 +71,7 @@ import apiService from '../services/api';
 import { FreightInvoice, FreightPayment } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
-import ColumnToggle, { ColumnConfig } from '../components/ColumnToggle';
+import { ColumnConfig } from '../components/ColumnToggle';
 import { useColumnToggle } from '../hooks/useColumnToggle';
 
 const FreightInvoices: React.FC = () => {
@@ -116,8 +114,8 @@ const FreightInvoices: React.FC = () => {
 
   // Payment history dialog state
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [paymentHistory, setPaymentHistory] = useState<FreightPayment[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [paymentHistory] = useState<FreightPayment[]>([]);
+  const [historyLoading] = useState(false);
 
   // Report dialog state
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -143,12 +141,8 @@ const FreightInvoices: React.FC = () => {
   ];
 
   const {
-    columns,
     visibleColumns,
     toggleColumn,
-    selectAllColumns,
-    selectNoneColumns,
-    resetToDefault,
   } = useColumnToggle({
     defaultColumns,
     storageKey: 'freight-invoices-table-columns',
@@ -165,19 +159,9 @@ const FreightInvoices: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, search]);
 
-  useEffect(() => {
-    load();
-  }, [page, rowsPerPage, search, statusFilter, agentFilter, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
-
-  useEffect(() => {
-    if (location.search.includes('newInvoice=true')) {
-      setSuccess('Freight invoice created successfully!');
-    }
-  }, [location]);
-
-  const load = async () => {
+  const load = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiService.getFreightInvoices(
@@ -202,7 +186,17 @@ const FreightInvoices: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, rowsPerPage, search, statusFilter, agentFilter, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (location.search.includes('newInvoice=true')) {
+      setSuccess('Freight invoice created successfully!');
+    }
+  }, [location]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this invoice?')) return;
@@ -248,21 +242,6 @@ const FreightInvoices: React.FC = () => {
     }
   };
 
-  const handleViewPaymentHistory = async (invoice: FreightInvoice) => {
-    try {
-      setHistoryLoading(true);
-      const res = await apiService.getFreightPaymentHistory(invoice._id);
-      if (res.success) {
-        setPaymentHistory(res.data || []);
-        setSelectedInvoice(invoice);
-        setHistoryDialogOpen(true);
-      }
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load payment history');
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
 
   const handleGenerateReport = async () => {
     try {

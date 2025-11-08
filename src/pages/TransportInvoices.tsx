@@ -108,8 +108,8 @@ const TransportInvoices: React.FC = () => {
 
   // Payment history dialog state
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
-  const [paymentHistory, setPaymentHistory] = useState<TransportPayment[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  const [paymentHistory] = useState<TransportPayment[]>([]);
+  const [historyLoading] = useState(false);
 
   // Report dialog state
   const [reportDialogOpen, setReportDialogOpen] = useState(false);

@@ -307,7 +307,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, readIds]);
 
   // Refresh notifications
   const refreshNotifications = useCallback(async () => {

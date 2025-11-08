@@ -49,20 +49,21 @@ const DashboardHeader = styled(Paper)(({ theme }) => ({
   },
 }));
 
-const MetricCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3.5),
-  borderRadius: theme.spacing(2.5),
-  background: theme.palette.mode === 'dark' 
-    ? alpha(theme.palette.background.paper, 0.9)
-    : theme.palette.background.paper,
-  border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
-  boxShadow: `0 4px 24px ${alpha(theme.palette.common.black, 0.08)}`,
-  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-  '&:hover': {
-    transform: 'translateY(-6px)',
-    boxShadow: `0 12px 40px ${alpha(theme.palette.common.black, 0.12)}`,
-  },
-}));
+// Unused component - commented out
+// const MetricCard = styled(Paper)(({ theme }) => ({
+//   padding: theme.spacing(3.5),
+//   borderRadius: theme.spacing(2.5),
+//   background: theme.palette.mode === 'dark' 
+//     ? alpha(theme.palette.background.paper, 0.9)
+//     : theme.palette.background.paper,
+//   border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
+//   boxShadow: `0 4px 24px ${alpha(theme.palette.common.black, 0.08)}`,
+//   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+//   '&:hover': {
+//     transform: 'translateY(-6px)',
+//     boxShadow: `0 12px 40px ${alpha(theme.palette.common.black, 0.12)}`,
+//   },
+// }));
 
 const NavigationChip = styled(Chip)(({ theme }) => ({
   background: alpha(theme.palette.primary.main, 0.1),
