@@ -48,8 +48,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
 } from 'recharts';
 import apiService from '../services/api';
 
@@ -88,8 +86,6 @@ interface CustomerOutstanding {
   totalOutstanding: number;
   invoiceCount: number;
 }
-
-const COLORS = ['#8b5cf6', '#6366f1', '#10b981', '#ef4444'];
 
 const StatCard: React.FC<StatCardProps> = ({ 
   title, 

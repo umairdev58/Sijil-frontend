@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -35,9 +35,7 @@ import {
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
-  Download as DownloadIcon,
   Lock as LockIcon,
-  Refresh as RefreshIcon,
   AttachMoney as MoneyIcon,
   AccountBalance as BankIcon
 } from '@mui/icons-material';
@@ -78,7 +76,7 @@ const DailyLedgerPage: React.FC = () => {
   });
 
   // Load daily ledger data
-  const loadDailyLedger = async () => {
+  const loadDailyLedger = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -101,12 +99,12 @@ const DailyLedgerPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate]);
 
   // Load data when date changes
   useEffect(() => {
     loadDailyLedger();
-  }, [selectedDate]);
+  }, [loadDailyLedger]);
 
   // Create or update daily ledger
   const handleCreateLedger = async () => {

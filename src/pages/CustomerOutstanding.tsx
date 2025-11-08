@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -7,11 +7,9 @@ import {
   Button,
   Stack,
   Divider,
-  CircularProgress,
   Alert,
   Card,
   CardContent,
-  CardHeader,
   Table,
   TableBody,
   TableCell,
@@ -19,13 +17,11 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Tooltip,
   TextField,
   MenuItem,
   FormControl,
   InputLabel,
   Select,
-  Avatar,
   LinearProgress,
   Collapse,
   InputAdornment,
@@ -34,10 +30,6 @@ import {
 import {
   Search as SearchIcon,
   FilterList as FilterIcon,
-  Download as DownloadIcon,
-  Refresh as RefreshIcon,
-  Visibility as VisibilityIcon,
-  Print as PrintIcon,
   Clear as ClearIcon,
 } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
@@ -81,7 +73,7 @@ const CustomerOutstandingPage: React.FC = () => {
     unpaidCustomers: 0,
   });
 
-  const fetchCustomerOutstanding = async () => {
+  const fetchCustomerOutstanding = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -108,9 +100,9 @@ const CustomerOutstandingPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, filters, page, rowsPerPage]);
 
-  const fetchUniqueProducts = async () => {
+  const fetchUniqueProducts = useCallback(async () => {
     try {
       const response = await apiService.getUniqueProducts();
       if (response.success) {
@@ -119,7 +111,7 @@ const CustomerOutstandingPage: React.FC = () => {
     } catch (error: any) {
       console.error('Error fetching unique products:', error);
     }
-  };
+  }, []);
 
   const handleDownloadPDF = async () => {
     try {
@@ -164,11 +156,6 @@ const CustomerOutstandingPage: React.FC = () => {
     setPage(0);
   };
 
-  // Fetch data when page or rowsPerPage changes
-  useEffect(() => {
-    fetchCustomerOutstanding();
-  }, [page, rowsPerPage]);
-
   // Auto-search with debouncing
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -179,18 +166,17 @@ const CustomerOutstandingPage: React.FC = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchInput]);
-
-  // Fetch data when search query changes
-  useEffect(() => {
-    fetchCustomerOutstanding();
-  }, [searchQuery]);
+  }, [searchInput, searchQuery]);
 
   // Initial data load
   useEffect(() => {
-    fetchCustomerOutstanding();
     fetchUniqueProducts();
-  }, []);
+  }, [fetchUniqueProducts]);
+
+  // Fetch data when dependencies change
+  useEffect(() => {
+    fetchCustomerOutstanding();
+  }, [fetchCustomerOutstanding]);
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -9,8 +9,6 @@ import {
   TextField,
   Typography,
   Alert,
-  CircularProgress,
-  IconButton,
   Chip,
   Switch,
   FormControlLabel,
@@ -69,11 +67,7 @@ const Customers: React.FC = () => {
     return { total, active, inactive };
   }, [customers]);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [pagination.page, pagination.pageSize]);
-
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiService.getCustomers(pagination.page + 1, pagination.pageSize);
@@ -91,7 +85,11 @@ const Customers: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.pageSize]);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
