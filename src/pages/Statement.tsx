@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
-  Paper,
   TextField,
   Button,
   Table,
@@ -28,7 +27,6 @@ import {
   Delete as DeleteIcon,
   Print as PrintIcon,
   Download as DownloadIcon,
-  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import apiService from '../services/api';
@@ -189,7 +187,7 @@ const Statement: React.FC = () => {
       // Some download managers/extensions intercept the request and cause a spurious
       // network error in the console while the file still downloads successfully.
       // We suppress the UI error for this specific case.
-      const code = e?.code || e?.response?.status;
+      // const code = e?.code || e?.response?.status;
       const msg = String(e?.message || '');
       const intercepted = msg.includes('ERR_FAILED') || msg.includes('Network Error');
       if (!intercepted) {

@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Button,
   Typography,
   Alert,
   CircularProgress,
-  Chip,
   MenuItem,
   FormControl,
   InputLabel,
   Select,
-  Stack,
   Paper,
   Card,
   CardContent,
@@ -33,8 +31,6 @@ import {
   PictureAsPdf as PdfIcon,
   TableChart as TableIcon,
   BarChart as BarChartIcon,
-  PieChart as PieChartIcon,
-  TrendingUp as TrendingUpIcon,
   FilterList as FilterIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
@@ -43,7 +39,6 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import apiService from '../services/api';
-import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface PurchaseReportData {
@@ -70,7 +65,6 @@ const PurchaseReportPage: React.FC = () => {
   const [reportData, setReportData] = useState<PurchaseReportData | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
-  const navigate = useNavigate();
   const [purchasesPage, setPurchasesPage] = useState(0);
   const [purchasesRowsPerPage, setPurchasesRowsPerPage] = useState(10);
 

@@ -64,7 +64,7 @@ const mockKPIData = {
 
 const ExecutiveDashboard: React.FC = () => {
   const theme = useTheme();
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [lastUpdated] = useState(new Date());
 
   const formatCurrency = (amount: number, currency: 'AED' | 'PKR') => {
     return new Intl.NumberFormat('en-US', {

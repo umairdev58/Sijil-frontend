@@ -44,7 +44,7 @@ const PurchasesPage: React.FC = () => {
   const { mode } = useTheme();
   const [rows, setRows] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);

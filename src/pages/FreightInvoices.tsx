@@ -140,10 +140,7 @@ const FreightInvoices: React.FC = () => {
     { id: 'actions', label: 'Actions', visible: true, order: 13, required: true },
   ];
 
-  const {
-    visibleColumns,
-    toggleColumn,
-  } = useColumnToggle({
+  useColumnToggle({
     defaultColumns,
     storageKey: 'freight-invoices-table-columns',
     requiredColumns: ['invoiceNumber', 'agent', 'customer', 'amount', 'outstandingAmount', 'status', 'actions'],

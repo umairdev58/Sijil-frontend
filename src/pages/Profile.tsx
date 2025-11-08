@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Paper,
   Avatar,
   Button,
   TextField,
-  Grid,
   Card,
   CardContent,
   Divider,
@@ -15,15 +13,10 @@ import {
   CircularProgress,
   Chip,
   Stack,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  DialogActions
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -42,7 +35,7 @@ import apiService from '../services/api';
 import { User } from '../types';
 
 const Profile: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

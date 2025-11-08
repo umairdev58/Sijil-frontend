@@ -77,7 +77,7 @@ const SalesPage: React.FC = () => {
     overdueCount: 0
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedRows, setExpandedRows] = useState<string[]>([]);
+  const [expandedRows] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -283,7 +283,7 @@ const SalesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchQuery, filters]);
+  }, [page, rowsPerPage, searchQuery, debouncedFilters]);
 
   const fetchCustomers = async () => {
     try {
@@ -510,17 +510,18 @@ const SalesPage: React.FC = () => {
     }
   };
 
-  const handleEdit = (sale: Sales) => {
-    navigate(`/sales/${sale._id}/edit`);
-  };
+  // Unused functions - commented out
+  // const handleEdit = (sale: Sales) => {
+  //   navigate(`/sales/${sale._id}/edit`);
+  // };
 
-  const handleView = (sale: Sales) => {
-    navigate(`/sales/${sale._id}`);
-  };
+  // const handleView = (sale: Sales) => {
+  //   navigate(`/sales/${sale._id}`);
+  // };
 
-  const handleAddPayment = (sale: Sales) => {
-    navigate(`/sales/${sale._id}?mode=addPayment`);
-  };
+  // const handleAddPayment = (sale: Sales) => {
+  //   navigate(`/sales/${sale._id}?mode=addPayment`);
+  // };
 
   // Use sales directly since filtering is now done on the server
   const paginatedSales = sales;

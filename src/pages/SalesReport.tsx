@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   Box,
@@ -11,12 +11,9 @@ import {
   FormControl,
   InputLabel,
   Select,
-  Stack,
   Paper,
-  Grid,
   Card,
   CardContent,
-  Divider,
   Table,
   TableBody,
   TableCell,
@@ -29,11 +26,6 @@ import {
   Checkbox,
   Tabs,
   Tab,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  IconButton,
-  Tooltip,
   Collapse,
 } from '@mui/material';
 import {
@@ -42,11 +34,8 @@ import {
   PictureAsPdf as PdfIcon,
   TableChart as TableIcon,
   BarChart as BarChartIcon,
-  PieChart as PieChartIcon,
-  TrendingUp as TrendingUpIcon,
   FilterList as FilterIcon,
   Clear as ClearIcon,
-  ExpandMore as ExpandMoreIcon,
   Refresh as RefreshIcon,
   Visibility as ViewIcon,
 } from '@mui/icons-material';
@@ -55,7 +44,6 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import apiService from '../services/api';
-import { useNavigate } from 'react-router-dom';
 
 interface ReportData {
   summary: {
@@ -78,7 +66,7 @@ const SalesReportPage: React.FC = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [expandedSaleIds, setExpandedSaleIds] = useState<string[]>([]);
   const [salesPage, setSalesPage] = useState(0);
   const [salesRowsPerPage, setSalesRowsPerPage] = useState(10);

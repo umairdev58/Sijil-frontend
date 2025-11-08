@@ -2,16 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Paper,
   Card,
   CardContent,
   Switch,
   FormControlLabel,
-  Divider,
   Button,
   Alert,
   Snackbar,
-  CircularProgress,
   Stack,
   List,
   ListItem,
@@ -26,9 +23,7 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
-  Chip,
-  Grid
+  MenuItem
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
@@ -39,15 +34,12 @@ import {
   Backup as BackupIcon,
   RestoreFromTrash as RestoreIcon,
   Save as SaveIcon,
-  Refresh as RefreshIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
   Email as EmailIcon,
-  NotificationsActive as NotificationsActiveIcon,
-  NotificationsOff as NotificationsOffIcon
+  NotificationsActive as NotificationsActiveIcon
 } from '@mui/icons-material';
 import { useTheme } from '../contexts/ThemeContext';
-import { useAuth } from '../contexts/AuthContext';
 
 interface SettingsState {
   theme: 'light' | 'dark' | 'auto';
@@ -68,7 +60,7 @@ interface SettingsState {
 
 const Settings: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);

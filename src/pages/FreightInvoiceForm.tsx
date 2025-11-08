@@ -21,7 +21,6 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useNavigate, useParams } from 'react-router-dom';
 import apiService from '../services/api';
-import { FreightInvoice } from '../types';
 import { styled } from '@mui/material/styles';
 
 const FreightInvoiceForm: React.FC = () => {
