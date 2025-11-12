@@ -628,6 +628,7 @@ class ApiService {
     sortOrder?: string;
     groupBy?: 'customer' | 'product';
     product?: string;
+    products?: string[];
   } = {}): Promise<{ 
     success: boolean; 
     data: any[]; 
@@ -638,7 +639,11 @@ class ApiService {
     
     // Add all filter parameters
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+      if (Array.isArray(value)) {
+        value
+          .filter(item => item !== undefined && item !== null && item !== '')
+          .forEach(item => params.append(key, item.toString()));
+      } else if (value !== undefined && value !== null && value !== '') {
         params.append(key, value.toString());
       }
     });
@@ -669,13 +674,18 @@ class ApiService {
     maxAmount?: number;
     status?: string;
     product?: string;
+    products?: string[];
     groupBy?: 'customer' | 'product';
   } = {}): Promise<void> {
     const params = new URLSearchParams();
     
     // Add all filter parameters
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
+      if (Array.isArray(value)) {
+        value
+          .filter(item => item !== undefined && item !== null && item !== '')
+          .forEach(item => params.append(key, item.toString()));
+      } else if (value !== undefined && value !== null && value !== '') {
         params.append(key, value.toString());
       }
     });

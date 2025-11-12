@@ -26,6 +26,10 @@ import {
   Collapse,
   InputAdornment,
   TablePagination,
+  Checkbox,
+  OutlinedInput,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -54,13 +58,12 @@ const CustomerOutstandingPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [uniqueProducts, setUniqueProducts] = useState<string[]>([]);
-
   // Filter states
   const [filters, setFilters] = useState({
     minAmount: '',
     maxAmount: '',
     status: '',
-    product: '',
+    products: [] as string[],
     groupBy: 'customer' as 'customer' | 'product',
   });
 
@@ -83,7 +86,7 @@ const CustomerOutstandingPage: React.FC = () => {
         minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
         status: filters.status || undefined,
-        product: filters.product || undefined,
+        products: filters.groupBy === 'product' ? filters.products : undefined,
         groupBy: filters.groupBy,
         page: page + 1,
         limit: rowsPerPage,
@@ -122,7 +125,7 @@ const CustomerOutstandingPage: React.FC = () => {
         minAmount: filters.minAmount ? Number(filters.minAmount) : undefined,
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
         status: filters.status || undefined,
-        product: filters.product || undefined,
+        products: filters.groupBy === 'product' ? filters.products : undefined,
         groupBy: filters.groupBy,
       });
 
@@ -178,8 +181,28 @@ const CustomerOutstandingPage: React.FC = () => {
     fetchCustomerOutstanding();
   }, [fetchCustomerOutstanding]);
 
-  const handleFilterChange = (field: string, value: string) => {
-    setFilters(prev => ({ ...prev, [field]: value }));
+  const handleFilterChange = (field: string, value: string | string[]) => {
+    setFilters(prev => {
+      const next = { ...prev, [field]: value } as typeof prev;
+      if (field === 'groupBy' && typeof value === 'string' && value === 'customer') {
+        next.products = [];
+      }
+      return next;
+    });
+  };
+
+  const handleProductToggle = (productName: string) => {
+    setFilters(prev => {
+      const isSelected = prev.products.includes(productName);
+      const products = isSelected
+        ? prev.products.filter(product => product !== productName)
+        : [...prev.products, productName];
+      return { ...prev, products };
+    });
+  };
+
+  const handleClearProductSelection = () => {
+    setFilters(prev => ({ ...prev, products: [] }));
   };
 
   const handleClearFilters = () => {
@@ -187,7 +210,7 @@ const CustomerOutstandingPage: React.FC = () => {
       minAmount: '',
       maxAmount: '',
       status: '',
-      product: '',
+      products: [],
       groupBy: 'customer',
     });
     setSearchInput('');
@@ -195,7 +218,7 @@ const CustomerOutstandingPage: React.FC = () => {
     setPage(0);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case 'overdue':
         return 'error';
@@ -208,7 +231,7 @@ const CustomerOutstandingPage: React.FC = () => {
     }
   };
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = (status?: string) => {
     switch (status) {
       case 'overdue':
         return 'OVERDUE';
@@ -217,7 +240,7 @@ const CustomerOutstandingPage: React.FC = () => {
       case 'unpaid':
         return 'UNPAID';
       default:
-        return status.toUpperCase();
+        return (status || 'UNKNOWN').toUpperCase();
     }
   };
 
@@ -374,19 +397,55 @@ const CustomerOutstandingPage: React.FC = () => {
             </FormControl>
 
             {filters.groupBy === 'product' && (
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>Product</InputLabel>
+              <FormControl sx={{ minWidth: 260 }}>
+                <InputLabel id="product-multi-select-label" shrink>
+                  Products
+                </InputLabel>
                 <Select
-                  value={filters.product}
-                  label="Product"
-                  onChange={(e) => handleFilterChange('product', e.target.value)}
+                  labelId="product-multi-select-label"
+                  multiple
+                  displayEmpty
+                  label="Products"
+                  value={filters.products}
+                  onChange={(event) => {
+                    const { value } = event.target;
+                    const nextValue = typeof value === 'string' ? value.split(',') : value;
+                    handleFilterChange('products', nextValue);
+                  }}
+                  input={<OutlinedInput label="Products" notched />}
+                  renderValue={(selected) => {
+                    const values = selected as string[];
+                    if (!values || values.length === 0) {
+                      return <Typography color="text.secondary">Select products</Typography>;
+                    }
+                    if (values.length <= 2) {
+                      return values.join(', ');
+                    }
+                    return `${values.length} selected`;
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: { maxHeight: 320, width: 260 },
+                    },
+                  }}
                 >
-                  <MenuItem value="">All Products</MenuItem>
                   {uniqueProducts?.map((product) => (
                     <MenuItem key={product} value={product}>
-                      {product}
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <Checkbox
+                          checked={filters.products.includes(product)}
+                          size="small"
+                          edge="start"
+                          tabIndex={-1}
+                          disableRipple
+                        />
+                      </ListItemIcon>
+                      <ListItemText primary={product} />
                     </MenuItem>
                   ))}
+                  {uniqueProducts?.length === 0 && (
+                    <MenuItem disabled>No products available</MenuItem>
+                  )}
                 </Select>
               </FormControl>
             )}
@@ -459,6 +518,26 @@ const CustomerOutstandingPage: React.FC = () => {
           {filters.groupBy === 'product' ? (
             // Product Grouped View - Compact and Theme-Consistent
             <Box>
+              {filters.products.length > 0 && (
+                <Box sx={{ p: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  {filters.products.map((product) => (
+                    <Chip
+                      key={product}
+                      label={product}
+                      onDelete={() => handleProductToggle(product)}
+                      variant="outlined"
+                      size="small"
+                    />
+                  ))}
+                  <Button
+                    size="small"
+                    onClick={handleClearProductSelection}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Clear selection
+                  </Button>
+                </Box>
+              )}
               {outstandingData?.map((productData) => {
                 const product = productData as ProductOutstanding;
                 return (
