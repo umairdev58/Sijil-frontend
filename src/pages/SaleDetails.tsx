@@ -694,7 +694,6 @@ const SaleDetails: React.FC = () => {
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 3, mt: 3 }}>
             <TextField
               fullWidth
-              type="number"
               label="Quantity"
               value={sale.quantity || ''}
               onChange={(e) => {
@@ -711,11 +710,10 @@ const SaleDetails: React.FC = () => {
               required
               error={Boolean(fieldErrors.quantity)}
               helperText={fieldErrors.quantity || ''}
-              inputProps={{ min: 1 }}
+              inputProps={{ min: 1, inputMode: 'numeric', pattern: '[0-9]*' }}
             />
             <TextField
               fullWidth
-              type="number"
               label="Rate (AED)"
               value={sale.rate || ''}
               onChange={(e) => {
@@ -732,11 +730,10 @@ const SaleDetails: React.FC = () => {
               required
               error={Boolean(fieldErrors.rate)}
               helperText={fieldErrors.rate || ''}
-              inputProps={{ min: 0, step: 0.01 }}
+              inputProps={{ min: 0, step: '0.01', inputMode: 'decimal', pattern: '[0-9]*[.,]?[0-9]*' }}
             />
             <TextField
               fullWidth
-              type="number"
               label="VAT Percentage (%)"
               value={sale.vatPercentage || ''}
               onChange={(e) => {
@@ -750,33 +747,33 @@ const SaleDetails: React.FC = () => {
                   }
                 }
               }}
-              inputProps={{ min: 0, max: 100, step: 0.01 }}
+              inputProps={{ min: 0, max: 100, step: '0.01', inputMode: 'decimal', pattern: '[0-9]*[.,]?[0-9]*' }}
             />
           </Box>
           
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3, mt: 3 }}>
             <TextField
               fullWidth
-              type="number"
               label="Subtotal (AED)"
               value={ceilToTwoDecimals((sale.quantity === '' ? 0 : sale.quantity || 0) * (sale.rate === '' ? 0 : sale.rate || 0))}
               InputProps={{ readOnly: true }}
+              inputProps={{ inputMode: 'decimal' }}
               helperText="Quantity × Rate"
             />
             <TextField
               fullWidth
-              type="number"
               label="Final Amount (AED)"
               value={ceilToTwoDecimals(sale.amount || 0)}
               InputProps={{ readOnly: true }}
+              inputProps={{ inputMode: 'decimal' }}
               helperText="Subtotal + VAT - Discount"
             />
             <TextField
               fullWidth
-              type="number"
               label="Outstanding Amount (AED)"
               value={ceilToTwoDecimals(sale.outstandingAmount || 0)}
               InputProps={{ readOnly: true }}
+              inputProps={{ inputMode: 'decimal' }}
               helperText="Auto-calculated"
             />
           </Box>
