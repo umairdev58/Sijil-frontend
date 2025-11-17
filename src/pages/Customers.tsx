@@ -116,15 +116,19 @@ const Customers: React.FC = () => {
     try {
       if (editingCustomer) {
         const response = await apiService.updateCustomer(editingCustomer._id, formData);
-        if (response.success) {
+        if (response.success && response.data && response.data._id) {
           setCustomers(prev => 
             prev.map(c => c._id === editingCustomer._id ? response.data! : c)
+              .filter(c => c && c._id) // Filter out any invalid entries
           );
+        } else {
+          // If response doesn't have the customer data, refetch the list
+          fetchCustomers();
         }
       } else {
         const response = await apiService.createCustomer(formData);
         if (response.success && response.data) {
-          setCustomers(prev => [...prev, response.data!]);
+          setCustomers(prev => [...prev, response.data!].filter(c => c && c._id));
         }
       }
       handleCloseDialog();
@@ -311,7 +315,13 @@ const Customers: React.FC = () => {
             setPagination({ page: model.page, pageSize: model.pageSize })
           }
           pageSizeOptions={[10, 25, 50]}
-          getRowId={(row) => row._id}
+          getRowId={(row) => {
+            if (!row || !row._id) {
+              console.warn('Invalid row data detected:', row);
+              return `invalid-${Date.now()}-${Math.random()}`;
+            }
+            return row._id;
+          }}
           disableRowSelectionOnClick
           sx={{
             border: 'none',
