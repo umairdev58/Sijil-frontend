@@ -414,28 +414,37 @@ class ApiService {
     return response.data;
   }
 
-  async printInvoice(id: string): Promise<void> {
+  async printInvoice(id: string): Promise<string> {
     const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
     const url = `${base}/sales/${id}/print`;
     const token = localStorage.getItem('token');
-    const xhr = new XMLHttpRequest();
-    xhr.open('GET', url);
-    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    xhr.responseType = 'blob';
-    xhr.onload = () => {
-      if (xhr.status === 200) {
-        const blob = new Blob([xhr.response], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `invoice-${id}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
-    };
-    xhr.send();
+    
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url);
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.responseType = 'blob';
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const blob = new Blob([xhr.response], { type: 'application/pdf' });
+          const blobUrl = window.URL.createObjectURL(blob);
+          resolve(blobUrl);
+        } else {
+          reject(new Error(`Failed to load invoice: ${xhr.status}`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Network error while loading invoice'));
+      xhr.send();
+    });
+  }
+
+  async downloadInvoice(id: string, blobUrl: string, filename?: string): Promise<void> {
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename || `invoice-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   async createSale(saleData: Partial<Sales>): Promise<ApiResponse<Sales>> {

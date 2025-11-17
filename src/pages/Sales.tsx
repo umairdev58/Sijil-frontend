@@ -86,6 +86,10 @@ const SalesPage: React.FC = () => {
   const [deletePassword, setDeletePassword] = useState('');
   const [saleToDelete, setSaleToDelete] = useState<Sales | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [currentInvoiceId, setCurrentInvoiceId] = useState<string | null>(null);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [hydratedFromUrl, setHydratedFromUrl] = useState(false);
@@ -155,41 +159,53 @@ const SalesPage: React.FC = () => {
     maxOutstanding: '',
   });
 
-  // Debounced filters to prevent refetching on every keystroke
+  // Debounced filters - only updated when Apply Filters is clicked or Enter is pressed
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
 
-  // Remove auto-search on pause; search triggers only on Enter via onKeyDown
-  // (Intentionally no useEffect syncing searchInput -> searchQuery)
+  // Function to apply filters (called on Enter key or Apply Filters button)
+  const applyFilters = useCallback(() => {
+    setDebouncedFilters(filters);
+    setPage(0);
+  }, [filters]);
 
-  // Date presets
+  // Date presets - apply filters immediately
   const applyLast7Days = () => {
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - 6);
-    setFilters((f) => ({
-      ...f,
+    const newFilters = {
+      ...filters,
       startDate: start.toISOString().split('T')[0],
       endDate: end.toISOString().split('T')[0],
-    }));
+    };
+    setFilters(newFilters);
+    setDebouncedFilters(newFilters);
+    setPage(0);
   };
   const applyThisMonth = () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    setFilters((f) => ({
-      ...f,
+    const newFilters = {
+      ...filters,
       startDate: start.toISOString().split('T')[0],
       endDate: end.toISOString().split('T')[0],
-    }));
+    };
+    setFilters(newFilters);
+    setDebouncedFilters(newFilters);
+    setPage(0);
   };
   const applyYTD = () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), 0, 1);
-    setFilters((f) => ({
-      ...f,
+    const newFilters = {
+      ...filters,
       startDate: start.toISOString().split('T')[0],
       endDate: new Date().toISOString().split('T')[0],
-    }));
+    };
+    setFilters(newFilters);
+    setDebouncedFilters(newFilters);
+    setPage(0);
   };
 
   // Use overall statistics from backend instead of calculating from current page data
@@ -294,6 +310,47 @@ const SalesPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Error fetching customers:', err);
+    }
+  };
+
+  const handlePrintInvoice = async (invoiceId: string) => {
+    try {
+      setPdfLoading(true);
+      setCurrentInvoiceId(invoiceId);
+      const blobUrl = await apiService.printInvoice(invoiceId);
+      setPdfBlobUrl(blobUrl);
+      setPdfPreviewOpen(true);
+    } catch (err) {
+      console.error('Error loading invoice:', err);
+      setError('Failed to load invoice. Please try again.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const handleClosePdfPreview = () => {
+    setPdfPreviewOpen(false);
+    if (pdfBlobUrl) {
+      window.URL.revokeObjectURL(pdfBlobUrl);
+      setPdfBlobUrl(null);
+    }
+    setCurrentInvoiceId(null);
+  };
+
+  const handleDownloadPdf = () => {
+    if (pdfBlobUrl && currentInvoiceId) {
+      apiService.downloadInvoice(currentInvoiceId, pdfBlobUrl);
+    }
+  };
+
+  const handlePrintPdf = () => {
+    if (pdfBlobUrl) {
+      const printWindow = window.open(pdfBlobUrl, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+      }
     }
   };
 
@@ -498,7 +555,8 @@ const SalesPage: React.FC = () => {
             <Tooltip title="Print Invoice">
               <IconButton
                 size="small"
-                onClick={() => apiService.printInvoice(sale._id)}
+                onClick={() => handlePrintInvoice(sale._id)}
+                disabled={pdfLoading}
               >
                 <PrintIcon />
               </IconButton>
@@ -582,14 +640,7 @@ const SalesPage: React.FC = () => {
   }, [page, rowsPerPage, hydratedFromUrl, fetchSales]);
 
   // Refetch data when search or filters change
-  // Debounce filters by 400ms to reduce fetch churn while typing
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setDebouncedFilters(filters);
-    }, 400);
-    return () => clearTimeout(t);
-  }, [filters]);
-
+  // Filters are only updated when Apply Filters is clicked or Enter is pressed
   useEffect(() => {
     if (!hydratedFromUrl) return;
     setPage(0);
@@ -793,7 +844,23 @@ const SalesPage: React.FC = () => {
               <Chip label="This Month" onClick={applyThisMonth} clickable color="primary" variant="outlined" />
               <Chip label="Last 7 Days" onClick={applyLast7Days} clickable variant="outlined" />
               <Chip label="YTD" onClick={applyYTD} clickable variant="outlined" />
-              <Chip label={filters.status ? `Status: ${filters.status.replace('_',' ')}` : 'Any Status'} onClick={() => setFilters({ ...filters, status: '' })} onDelete={filters.status ? () => setFilters({ ...filters, status: '' }) : undefined} variant={filters.status ? 'filled' : 'outlined'} color={filters.status ? 'secondary' : 'default'} />
+              <Chip 
+                label={filters.status ? `Status: ${filters.status.replace('_',' ')}` : 'Any Status'} 
+                onClick={() => {
+                  const newFilters = { ...filters, status: '' };
+                  setFilters(newFilters);
+                  setDebouncedFilters(newFilters);
+                  setPage(0);
+                }} 
+                onDelete={filters.status ? () => {
+                  const newFilters = { ...filters, status: '' };
+                  setFilters(newFilters);
+                  setDebouncedFilters(newFilters);
+                  setPage(0);
+                } : undefined} 
+                variant={filters.status ? 'filled' : 'outlined'} 
+                color={filters.status ? 'secondary' : 'default'} 
+              />
             </Stack>
             
             {/* Basic Filters */}
@@ -803,24 +870,44 @@ const SalesPage: React.FC = () => {
                 label="Customer"
                 value={filters.customer}
                 onChange={(e) => setFilters({ ...filters, customer: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyFilters();
+                  }
+                }}
               />
               <TextField
                 fullWidth
                 label="Supplier"
                 value={filters.supplier}
                 onChange={(e) => setFilters({ ...filters, supplier: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyFilters();
+                  }
+                }}
               />
               <TextField
                 fullWidth
                 label="Container No"
                 value={filters.containerNo}
                 onChange={(e) => setFilters({ ...filters, containerNo: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyFilters();
+                  }
+                }}
               />
               <TextField
                 fullWidth
                 label="Product"
                 value={filters.product}
                 onChange={(e) => setFilters({ ...filters, product: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    applyFilters();
+                  }
+                }}
               />
             </Box>
 
@@ -915,28 +1002,36 @@ const SalesPage: React.FC = () => {
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
               <Button
                 variant="outlined"
-                onClick={() => setFilters({
-                  customer: '',
-                  supplier: '',
-                  containerNo: '',
-                  product: '',
-                  status: '',
-                  startDate: '',
-                  endDate: '',
-                  dueStartDate: '',
-                  dueEndDate: '',
-                  minAmount: '',
-                  maxAmount: '',
-                  minOutstanding: '',
-                  maxOutstanding: '',
-                })}
+                onClick={() => {
+                  const clearedFilters = {
+                    customer: '',
+                    supplier: '',
+                    containerNo: '',
+                    product: '',
+                    status: '',
+                    startDate: currentMonthDates.startDate,
+                    endDate: currentMonthDates.endDate,
+                    dueStartDate: '',
+                    dueEndDate: '',
+                    minAmount: '',
+                    maxAmount: '',
+                    minOutstanding: '',
+                    maxOutstanding: '',
+                  };
+                  setFilters(clearedFilters);
+                  setDebouncedFilters(clearedFilters);
+                  setPage(0);
+                }}
                 sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
               >
                 Clear All Filters
               </Button>
               <Button
                 variant="contained"
-                onClick={() => setShowFilters(false)}
+                onClick={() => {
+                  applyFilters();
+                  setShowFilters(false);
+                }}
                 sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
               >
                 Apply Filters
@@ -1348,6 +1443,111 @@ const SalesPage: React.FC = () => {
             {deleteLoading ? 'Deleting...' : 'Delete Sale'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* PDF Preview Dialog */}
+      <Dialog
+        open={pdfPreviewOpen}
+        onClose={handleClosePdfPreview}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            bgcolor: mode === 'dark' ? '#1e293b' : '#ffffff',
+            minHeight: '80vh',
+            maxHeight: '90vh',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          borderBottom: mode === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+          pb: 2
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            Invoice Preview
+          </Typography>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="contained"
+              startIcon={<PrintIcon />}
+              onClick={handlePrintPdf}
+              disabled={!pdfBlobUrl}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
+                bgcolor: mode === 'dark' ? '#3b82f6' : '#2563eb',
+                '&:hover': {
+                  bgcolor: mode === 'dark' ? '#2563eb' : '#1d4ed8',
+                },
+              }}
+            >
+              Print
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={handleDownloadPdf}
+              disabled={!pdfBlobUrl}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Download
+            </Button>
+            <IconButton
+              onClick={handleClosePdfPreview}
+              sx={{
+                color: mode === 'dark' ? '#cbd5e1' : '#6b7280',
+              }}
+            >
+              <ClearIcon />
+            </IconButton>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ 
+          p: 0, 
+          position: 'relative',
+          bgcolor: mode === 'dark' ? '#0f172a' : '#f8fafc',
+          minHeight: '70vh',
+        }}>
+          {pdfLoading ? (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              minHeight: '70vh' 
+            }}>
+              <CircularProgress />
+            </Box>
+          ) : pdfBlobUrl ? (
+            <iframe
+              src={pdfBlobUrl}
+              style={{
+                width: '100%',
+                height: '70vh',
+                border: 'none',
+              }}
+              title="Invoice Preview"
+            />
+          ) : (
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              minHeight: '70vh',
+              color: mode === 'dark' ? '#94a3b8' : '#6b7280'
+            }}>
+              <Typography>Failed to load invoice</Typography>
+            </Box>
+          )}
+        </DialogContent>
       </Dialog>
     </Box>
   );
