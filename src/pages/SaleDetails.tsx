@@ -55,6 +55,10 @@ import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import AutocompleteTextField from '../components/AutocompleteTextField';
 
+const decimalInputRegex = /^\d*(?:\.\d*)?$/;
+
+const normalizeDecimalInput = (value: string) => value.replace(/,/g, '.');
+
 const StatusChip = styled(Chip)(({ theme }) => ({
   fontWeight: 600,
   textTransform: 'uppercase',
@@ -697,34 +701,27 @@ const SaleDetails: React.FC = () => {
               label="Quantity"
               value={sale.quantity || ''}
               onChange={(e) => {
-                const value = e.target.value;
-                if (value === '') {
-                  handleInputChange('quantity', '');
-                } else {
-                  const numValue = parseInt(value);
-                  if (!isNaN(numValue) && numValue > 0) {
-                    handleInputChange('quantity', numValue);
-                  }
+                const rawValue = e.target.value;
+                const normalized = normalizeDecimalInput(rawValue);
+                if (normalized === '' || decimalInputRegex.test(normalized)) {
+                  handleInputChange('quantity', normalized);
                 }
               }}
               required
               error={Boolean(fieldErrors.quantity)}
               helperText={fieldErrors.quantity || ''}
-              inputProps={{ min: 1, inputMode: 'numeric', pattern: '[0-9]*' }}
+              inputProps={{ inputMode: 'decimal', pattern: '[0-9]*[.,]?[0-9]*' }}
             />
             <TextField
               fullWidth
               label="Rate (AED)"
               value={sale.rate || ''}
               onChange={(e) => {
-                const value = e.target.value;
-                if (value === '') {
-                  handleInputChange('rate', '');
-                } else {
-                  const numValue = parseFloat(value);
-                  if (!isNaN(numValue) && numValue >= 0) {
-                    handleInputChange('rate', numValue);
-                  }
+                const rawValue = e.target.value;
+                const normalized = normalizeDecimalInput(rawValue);
+                const parsed = Number(normalized);
+                if (normalized === '' || (decimalInputRegex.test(normalized) && !Number.isNaN(parsed) && parsed >= 0)) {
+                  handleInputChange('rate', normalized);
                 }
               }}
               required
@@ -737,14 +734,14 @@ const SaleDetails: React.FC = () => {
               label="VAT Percentage (%)"
               value={sale.vatPercentage || ''}
               onChange={(e) => {
-                const value = e.target.value;
-                if (value === '') {
-                  handleInputChange('vatPercentage', '');
-                } else {
-                  const numValue = parseFloat(value);
-                  if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
-                    handleInputChange('vatPercentage', numValue);
-                  }
+                const rawValue = e.target.value;
+                const normalized = normalizeDecimalInput(rawValue);
+                const parsed = Number(normalized);
+                if (
+                  normalized === '' ||
+                  (decimalInputRegex.test(normalized) && !Number.isNaN(parsed) && parsed >= 0 && parsed <= 100)
+                ) {
+                  handleInputChange('vatPercentage', normalized);
                 }
               }}
               inputProps={{ min: 0, max: 100, step: '0.01', inputMode: 'decimal', pattern: '[0-9]*[.,]?[0-9]*' }}

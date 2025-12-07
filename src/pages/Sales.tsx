@@ -33,6 +33,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Divider,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -43,6 +44,7 @@ import {
   Download as DownloadIcon,
   Payment as PaymentIcon,
   Print as PrintIcon,
+  Info as InfoIcon,
   Clear as ClearIcon,
   Warning as WarningIcon,
   Security as SecurityIcon,
@@ -53,7 +55,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Snackbar } from '@mui/material';
 import apiService from '../services/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Sales } from '../types';
+import { Sales, Payment } from '../types';
 import BeautifulRefreshButton from '../components/BeautifulRefreshButton';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ColumnToggle, { ColumnConfig } from '../components/ColumnToggle';
@@ -83,6 +85,11 @@ const SalesPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [transactionModalSale, setTransactionModalSale] = useState<Sales | null>(null);
+  const [transactionPayments, setTransactionPayments] = useState<Payment[]>([]);
+  const [transactionPaymentsLoading, setTransactionPaymentsLoading] = useState(false);
+  const [transactionPaymentsError, setTransactionPaymentsError] = useState<string | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
   const [saleToDelete, setSaleToDelete] = useState<Sales | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -96,6 +103,39 @@ const SalesPage: React.FC = () => {
   const { mode } = useAppTheme();
   const { user } = useAuth();
   const [searchInput, setSearchInput] = useState('');
+
+  const openTransactionModal = (sale: Sales) => {
+    loadTransactionPayments(sale);
+    setTransactionModalSale(sale);
+    setTransactionModalOpen(true);
+  };
+
+  const loadTransactionPayments = async (sale: Sales) => {
+    setTransactionPaymentsLoading(true);
+    setTransactionPaymentsError(null);
+    try {
+      const response = await apiService.getPaymentHistory(sale._id);
+      if (response.success && response.payments) {
+        setTransactionPayments(response.payments);
+      } else {
+        setTransactionPayments([]);
+        setTransactionPaymentsError('No transaction data available');
+      }
+    } catch (err: any) {
+      console.error('Failed to load transaction payments:', err);
+      setTransactionPayments([]);
+      setTransactionPaymentsError(err?.response?.data?.message || 'Failed to load transaction data');
+    } finally {
+      setTransactionPaymentsLoading(false);
+    }
+  };
+
+  const closeTransactionModal = () => {
+    setTransactionModalOpen(false);
+    setTransactionModalSale(null);
+    setTransactionPayments([]);
+    setTransactionPaymentsError(null);
+  };
 
   // Column configuration for table
   const defaultColumns: ColumnConfig[] = [
@@ -409,6 +449,26 @@ const SalesPage: React.FC = () => {
     }
   };
 
+  const formatCurrency = (value?: number) => {
+    return `AED ${Number(value || 0).toLocaleString('en-AE', { minimumFractionDigits: 2 })}`;
+  };
+
+  const formatDate = (value?: string) => {
+    if (!value) return 'N/A';
+    return new Date(value).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const getVatRateLabel = (sale?: Sales | null) => {
+    if (!sale) return '0%';
+    const rateBase = Math.max((sale.amount || 0) - (sale.vatAmount || 0), 0);
+    if (rateBase === 0) return '0%';
+    return `${(((sale.vatAmount || 0) / rateBase) * 100).toFixed(2)}%`;
+  };
+
   // Helper function to render cell content based on column ID
   const renderCellContent = (sale: Sales, columnId: string) => {
     switch (columnId) {
@@ -561,6 +621,15 @@ const SalesPage: React.FC = () => {
                 <PrintIcon />
               </IconButton>
             </Tooltip>
+            <Tooltip title="View Transaction">
+              <IconButton
+                size="small"
+                color="info"
+                onClick={() => openTransactionModal(sale)}
+              >
+                <InfoIcon />
+              </IconButton>
+            </Tooltip>
             {user?.role === 'admin' && (
               <Tooltip title="Delete Sale">
                 <IconButton
@@ -594,6 +663,9 @@ const SalesPage: React.FC = () => {
 
   // Use sales directly since filtering is now done on the server
   const paginatedSales = sales;
+  const transactionProgress = transactionModalSale?.amount
+    ? Math.min(((transactionModalSale.receivedAmount || 0) / (transactionModalSale.amount || 1)) * 100, 100)
+    : 0;
 
   // On first mount, hydrate state from URL params if present, then mark hydrated
   useEffect(() => {
@@ -1548,6 +1620,189 @@ const SalesPage: React.FC = () => {
             </Box>
           )}
         </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={transactionModalOpen}
+        onClose={closeTransactionModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 4,
+            overflow: 'hidden',
+            bgcolor: mode === 'dark' ? '#0f172a' : '#f9fafb',
+            boxShadow: '0 18px 45px rgba(15, 23, 42, 0.35)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ p: 0 }}>
+          <Box
+            sx={{
+              background: mode === 'dark'
+                ? 'linear-gradient(135deg, #2563eb, #8b5cf6)'
+                : 'linear-gradient(135deg, #1e40af, #8b5cf6)',
+              color: '#fff',
+              px: 3,
+              py: 3,
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Invoice #{transactionModalSale?.invoiceNumber || '—'}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              {transactionModalSale?.customer || 'Unknown Customer'} · {transactionModalSale?.product || 'No product'}
+            </Typography>
+            <Typography variant="h4" sx={{ mt: 2, mb: 1 }}>
+              {formatCurrency(transactionModalSale?.amount)}
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={transactionProgress}
+              sx={{
+                height: 8,
+                borderRadius: 999,
+                backgroundColor: 'rgba(255,255,255,0.3)',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 999,
+                  backgroundColor: '#fcd34d',
+                },
+              }}
+            />
+            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="caption" sx={{ letterSpacing: 0.5 }}>
+                Received {Math.round(transactionProgress)}% of total
+              </Typography>
+              <Chip
+                label={(transactionModalSale?.status || 'unknown').replace('_', ' ')}
+                color={getStatusColor(transactionModalSale?.status) as any}
+                size="small"
+              />
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{
+            mt: 1,
+            p: 3,
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+            gap: 2,
+          }}>
+            {[
+              { label: 'Quantity', value: transactionModalSale?.quantity?.toLocaleString() || '0' },
+              { label: 'Rate', value: formatCurrency(transactionModalSale?.rate) },
+              { label: 'VAT %', value: getVatRateLabel(transactionModalSale) },
+              { label: 'VAT Amount', value: formatCurrency(transactionModalSale?.vatAmount) },
+              { label: 'Received', value: formatCurrency(transactionModalSale?.receivedAmount) },
+              { label: 'Outstanding', value: formatCurrency(transactionModalSale?.outstandingAmount) },
+              { label: 'Invoice Date', value: formatDate(transactionModalSale?.invoiceDate) },
+              { label: 'Due Date', value: formatDate(transactionModalSale?.dueDate) },
+            ].map((item) => (
+              <Box
+                key={item.label}
+                sx={{
+                  border: '1px dashed',
+                  borderColor: mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.08)',
+                  borderRadius: 3,
+                  p: 1.5,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary">
+                  {item.label}
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                  {item.value}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+          <Box sx={{ mt: 2, px: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+              Transaction Timeline
+            </Typography>
+            <Stack spacing={1}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">Invoice recorded</Typography>
+                <Typography variant="body2" fontWeight={600}>{formatDate(transactionModalSale?.invoiceDate)}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">Status updated</Typography>
+                <Typography variant="body2" fontWeight={600}>{transactionModalSale?.status?.replace('_', ' ') || 'Unknown'}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">Last received</Typography>
+                <Typography variant="body2" fontWeight={600}>
+                  {transactionModalSale?.receivedAmount && transactionModalSale.receivedAmount > 0
+                    ? formatCurrency(transactionModalSale.receivedAmount)
+                    : 'No payments yet'}
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+          <Box sx={{ mt: 2, px: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+              Transaction Records
+            </Typography>
+            <Box sx={{ minHeight: 70 }}>
+              {transactionPaymentsLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                  <CircularProgress size={28} />
+                </Box>
+              ) : transactionPayments.length ? (
+                <Stack spacing={1}>
+                  {transactionPayments.map((payment) => (
+                    <Box
+                      key={payment._id}
+                      sx={{
+                        borderRadius: 3,
+                        border: '1px solid',
+                        borderColor: mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.12)',
+                        p: 2,
+                        backgroundColor: mode === 'dark' ? 'rgba(67,56,202,0.08)' : 'rgba(99,102,241,0.08)',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2" fontWeight={600}>
+                          {formatCurrency(payment.amount)}
+                        </Typography>
+                        <Chip label={payment.paymentType?.replace('_', ' ')?.toUpperCase()} size="small" />
+                      </Box>
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDate(payment.paymentDate)} · {payment.paymentMethod?.replace('_', ' ') || 'N/A'}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : transactionPaymentsError ? (
+                <Typography variant="body2" color="error">
+                  {transactionPaymentsError}
+                </Typography>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No payments have been recorded yet.
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <Divider />
+        <DialogActions sx={{ p: 3, justifyContent: 'space-between' }}>
+          <Button onClick={closeTransactionModal} variant="outlined">
+            Close
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (transactionModalSale?._id) {
+                navigate(`/sales/${transactionModalSale._id}`);
+              }
+              closeTransactionModal();
+            }}
+          >
+            Open Invoice
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

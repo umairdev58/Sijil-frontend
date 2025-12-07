@@ -56,6 +56,7 @@ export interface Sales {
   quantity: number;
   rate: number;
   vatAmount: number;
+  vatPercentage: number;
   discount: number;
   amount: number;
   dueDate: string;
@@ -79,6 +80,7 @@ export interface Payment {
   reference?: string;
   notes?: string;
   paymentDate: string;
+  discount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -370,7 +372,7 @@ export interface ContainerStatementProduct {
   product: string;
   quantity: number;
   unitPrice: number;
-  amountWithoutVAT: number;
+  amount: number;
 }
 
 export interface ContainerStatementExpense {

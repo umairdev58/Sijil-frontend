@@ -44,9 +44,9 @@ const Statement: React.FC = () => {
 
   // Sample data structure based on the image
   const [products, setProducts] = useState<ContainerStatementProduct[]>([
-    { srNo: 1, product: 'POTATO PAKISTAN', quantity: 1136, unitPrice: 4.50, amountWithoutVAT: 5112.00 },
-    { srNo: 2, product: 'POTATO PAKISTAN', quantity: 560, unitPrice: 5.00, amountWithoutVAT: 2800.00 },
-    { srNo: 3, product: 'POTATO PAKISTAN', quantity: 2925, unitPrice: 4.75, amountWithoutVAT: 13893.75 },
+    { srNo: 1, product: 'POTATO PAKISTAN', quantity: 1136, unitPrice: 4.50, amount: 5112.00 },
+    { srNo: 2, product: 'POTATO PAKISTAN', quantity: 560, unitPrice: 5.00, amount: 2800.00 },
+    { srNo: 3, product: 'POTATO PAKISTAN', quantity: 2925, unitPrice: 4.75, amount: 13893.75 },
   ]);
 
   const [expenses, setExpenses] = useState<ContainerStatementExpense[]>([
@@ -59,19 +59,19 @@ const Statement: React.FC = () => {
 
   // Group products by product + unitPrice (rate) and aggregate quantity and amount
   const groupedProducts: ContainerStatementProduct[] = useMemo(() => {
-    const aggregateMap = new Map<string, { product: string; unitPrice: number; quantity: number; amountWithoutVAT: number }>();
+    const aggregateMap = new Map<string, { product: string; unitPrice: number; quantity: number; amount: number }>();
     products.forEach((p) => {
       const key = `${p.product}__${p.unitPrice}`;
       const existing = aggregateMap.get(key);
       if (existing) {
         existing.quantity += p.quantity;
-        existing.amountWithoutVAT += p.amountWithoutVAT;
+        existing.amount += p.amount;
       } else {
         aggregateMap.set(key, {
           product: p.product,
           unitPrice: p.unitPrice,
           quantity: p.quantity,
-          amountWithoutVAT: p.amountWithoutVAT,
+          amount: p.amount,
         });
       }
     });
@@ -84,14 +84,14 @@ const Statement: React.FC = () => {
         product: item.product,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        amountWithoutVAT: item.amountWithoutVAT,
+        amount: item.amount,
       }));
     return rows;
   }, [products]);
 
   // Calculate totals from grouped rows (same totals as original list)
   const totalQuantity = groupedProducts.reduce((sum, product) => sum + product.quantity, 0);
-  const grossSale = groupedProducts.reduce((sum, product) => sum + product.amountWithoutVAT, 0);
+  const grossSale = groupedProducts.reduce((sum, product) => sum + product.amount, 0);
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const netSale = grossSale - totalExpenses;
 
@@ -286,7 +286,7 @@ const Statement: React.FC = () => {
                         <TableCell>PRODUCT</TableCell>
                         <TableCell align="right">QTY</TableCell>
                         <TableCell align="right">UNIT PRICE</TableCell>
-                        <TableCell align="right">Amount Without VAT (AED)</TableCell>
+        <TableCell align="right">Amount (AED)</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -296,7 +296,7 @@ const Statement: React.FC = () => {
                           <TableCell>{product.product}</TableCell>
                           <TableCell align="right">{product.quantity.toLocaleString()}</TableCell>
                           <TableCell align="right">{product.unitPrice.toFixed(2)}</TableCell>
-                          <TableCell align="right">{product.amountWithoutVAT.toLocaleString('en-AE', { minimumFractionDigits: 2 })}</TableCell>
+                          <TableCell align="right">{product.amount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}</TableCell>
                         </TableRow>
                       ))}
                       <TableRow sx={{ backgroundColor: mode === 'dark' ? 'grey.800' : 'grey.100' }}>
@@ -315,9 +315,6 @@ const Statement: React.FC = () => {
             <Card>
               <CardHeader title="Expenses" />
               <CardContent>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  VAT collected on sales is automatically included as a protected expense and cannot be removed.
-                </Typography>
                 {/* Add New Expense */}
                 <Box sx={{ mb: 2 }}>
                   <TextField
