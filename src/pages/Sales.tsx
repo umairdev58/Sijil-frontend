@@ -54,7 +54,7 @@ import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Snackbar } from '@mui/material';
 import apiService from '../services/api';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Sales, Payment } from '../types';
 import BeautifulRefreshButton from '../components/BeautifulRefreshButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -99,10 +99,17 @@ const SalesPage: React.FC = () => {
   const [currentInvoiceId, setCurrentInvoiceId] = useState<string | null>(null);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [hydratedFromUrl, setHydratedFromUrl] = useState(false);
   const { mode } = useAppTheme();
   const { user } = useAuth();
   const [searchInput, setSearchInput] = useState('');
+
+  const buildSalesPath = (saleId?: string) => {
+    const basePath = saleId ? `/sales/${saleId}` : '/sales';
+    const query = searchParams.toString();
+    return query ? `${basePath}?${query}` : basePath;
+  };
 
   const openTransactionModal = (sale: Sales) => {
     loadTransactionPayments(sale);
@@ -598,7 +605,7 @@ const SalesPage: React.FC = () => {
             <Tooltip title="View Details">
               <IconButton
                 size="small"
-                onClick={() => navigate(`/sales/${sale._id}`)}
+                onClick={() => navigate(buildSalesPath(sale._id))}
               >
                 <VisibilityIcon />
               </IconButton>
@@ -606,7 +613,7 @@ const SalesPage: React.FC = () => {
             <Tooltip title="Add Payment">
               <IconButton
                 size="small"
-                onClick={() => navigate(`/sales/${sale._id}`)}
+                onClick={() => navigate(buildSalesPath(sale._id))}
                 disabled={sale.outstandingAmount <= 0}
               >
                 <PaymentIcon />
@@ -683,7 +690,10 @@ const SalesPage: React.FC = () => {
     });
 
     // Hydrate search, pagination
-    if (qp.search) { setSearchQuery(qp.search); }
+    if (qp.search) {
+      setSearchQuery(qp.search);
+      setSearchInput(qp.search);
+    }
     if (qp.page) { setPage(Math.max(0, parseInt(qp.page) || 0)); }
     if (qp.rows) { setRowsPerPage(Math.max(1, parseInt(qp.rows) || 10)); }
 
@@ -1795,7 +1805,7 @@ const SalesPage: React.FC = () => {
             variant="contained"
             onClick={() => {
               if (transactionModalSale?._id) {
-                navigate(`/sales/${transactionModalSale._id}`);
+                navigate(buildSalesPath(transactionModalSale._id));
               }
               closeTransactionModal();
             }}

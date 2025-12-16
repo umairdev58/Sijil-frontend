@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { ceilToTwoDecimals } from '../lib/utils';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Autocomplete,
   Box,
@@ -105,6 +105,7 @@ const PaymentCard = styled(Card)(({ theme }) => ({
 const SaleDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [sale, setSale] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
@@ -396,7 +397,7 @@ const SaleDetails: React.FC = () => {
 
   const handleCancel = () => {
     if (isNewSale) {
-      navigate('/sales');
+      navigate(`/sales${location.search}`);
     } else {
       navigate(`/sales/${id}`);
     }
@@ -843,7 +844,7 @@ const SaleDetails: React.FC = () => {
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Button
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/sales')}
+          onClick={() => navigate(`/sales${location.search}`)}
           sx={{ color: 'primary.main', fontWeight: 600 }}
         >
           Back to Sales
