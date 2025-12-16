@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { ceilToTwoDecimals } from '../lib/utils';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
+  Autocomplete,
   Box,
   Typography,
   Paper,
@@ -615,22 +616,29 @@ const SaleDetails: React.FC = () => {
               error={Boolean(fieldErrors.invoiceNumber)}
               required={!isNewSale}
             />
-            <FormControl fullWidth error={Boolean(fieldErrors.customer)}>
-              <InputLabel>Customer</InputLabel>
-              <Select
-                label="Customer"
-                value={sale.customer || ''}
-                onChange={(e) => handleInputChange('customer', e.target.value)}
-                required
-              >
-                {customers.map((c) => (
-                  <MenuItem key={c._id} value={c.ename}>{c.ename}</MenuItem>
-                ))}
-              </Select>
-              {fieldErrors.customer && (
-                <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>{fieldErrors.customer}</Typography>
+            <Autocomplete
+              fullWidth
+              options={customers}
+              getOptionLabel={(option) => option?.ename || ''}
+              isOptionEqualToValue={(option, value) => option?._id === value?._id}
+              value={customers.find((c) => c.ename === sale?.customer) || null}
+              onChange={(_, value) => handleInputChange('customer', value?.ename || '')}
+              inputValue={sale?.customer || ''}
+              onInputChange={(_, value, reason) => {
+                if (reason === 'reset') return;
+                handleInputChange('customer', value);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Customer"
+                  required
+                  error={Boolean(fieldErrors.customer)}
+                  helperText={fieldErrors.customer}
+                />
               )}
-            </FormControl>
+              noOptionsText="No customer found"
+            />
           </Box>
           
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 3, mt: 3 }}>
