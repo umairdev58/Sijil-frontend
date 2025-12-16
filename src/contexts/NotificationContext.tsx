@@ -164,7 +164,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       }
 
       // 3.5. Check for new customers created today
-      const todayCustomersResponse = await apiService.getCustomers(1, 10);
+      const todayCustomersResponse = await apiService.getCustomers({ page: 1, limit: 10 });
       if (todayCustomersResponse.success && todayCustomersResponse.data && todayCustomersResponse.data.length > 0) {
         // Filter customers created today
         const todayCustomers = todayCustomersResponse.data.filter((customer: any) => {

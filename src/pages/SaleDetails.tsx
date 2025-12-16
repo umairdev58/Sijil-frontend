@@ -250,7 +250,7 @@ const SaleDetails: React.FC = () => {
     const loadLookups = async () => {
       try {
         const [custRes, suppRes] = await Promise.all([
-          apiService.getCustomers(1, 100),
+          apiService.getCustomers({ fetchAll: true }),
           (apiService as any).getSuppliers ? (apiService as any).getSuppliers(1, 100) : Promise.resolve({ success: true, data: [] })
         ]);
         if (custRes?.success && custRes.data) setCustomers(custRes.data);

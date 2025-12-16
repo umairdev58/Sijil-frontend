@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { User, Customer, Supplier, Sales, Payment, LoginCredentials, ChangePasswordData, ApiResponse, PaginatedResponse, SaleApiResponse, Purchase, DailyLedger, LedgerEntry, LedgerSummary, FreightInvoice, TransportInvoice, FreightPayment, TransportPayment, DubaiTransportInvoice, DubaiClearanceInvoice, DubaiTransportPayment, DubaiClearancePayment } from '../types';
+import { User, Customer, Supplier, Sales, Payment, LoginCredentials, ChangePasswordData, ApiResponse, PaginatedResponse, SaleApiResponse, Purchase, DailyLedger, LedgerEntry, LedgerSummary, FreightInvoice, TransportInvoice, FreightPayment, TransportPayment, DubaiTransportInvoice, DubaiClearanceInvoice, DubaiTransportPayment, DubaiClearancePayment, CustomerQueryOptions } from '../types';
 
 // Add interface for sales filter parameters
 export interface SalesFilterParams {
@@ -162,9 +162,26 @@ class ApiService {
     return response.data;
   }
 
-  // Customer endpoints
-  async getCustomers(page = 1, limit = 10): Promise<PaginatedResponse<Customer>> {
-    const response: AxiosResponse = await this.api.get(`/customers?page=${page}&limit=${limit}`);
+  async getCustomers(options: CustomerQueryOptions = {}): Promise<PaginatedResponse<Customer>> {
+    const { page = 1, limit = 10, search, isActive, fetchAll } = options;
+    const params = new URLSearchParams();
+
+    if (fetchAll) {
+      params.append('all', 'true');
+    } else {
+      params.append('page', String(page));
+      params.append('limit', String(limit));
+    }
+
+    if (typeof search === 'string' && search.trim() !== '') {
+      params.append('search', search.trim());
+    }
+
+    if (isActive !== undefined && isActive !== '') {
+      params.append('isActive', typeof isActive === 'boolean' ? String(isActive) : isActive);
+    }
+
+    const response: AxiosResponse = await this.api.get(`/customers?${params.toString()}`);
     return response.data;
   }
 
@@ -188,8 +205,14 @@ class ApiService {
     return response.data;
   }
 
-  async searchCustomers(query: string): Promise<ApiResponse<Customer[]>> {
-    const response: AxiosResponse = await this.api.get(`/customers/search?q=${encodeURIComponent(query)}`);
+  async searchCustomers(query: string, limit?: number): Promise<ApiResponse<Customer[]>> {
+    const encoded = encodeURIComponent(query);
+    const params = new URLSearchParams();
+    if (limit !== undefined) {
+      params.append('limit', String(limit));
+    }
+    const url = `/customers/search/${encoded}` + (params.toString() ? `?${params.toString()}` : '');
+    const response: AxiosResponse = await this.api.get(url);
     return response.data;
   }
 

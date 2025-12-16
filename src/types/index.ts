@@ -27,6 +27,14 @@ export interface Customer {
   fullName?: string;
 }
 
+export interface CustomerQueryOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isActive?: boolean | string;
+  fetchAll?: boolean;
+}
+
 export interface Supplier {
   _id: string;
   ename: string;
@@ -192,6 +200,7 @@ export interface PaginatedResponse<T> {
     limit: number;
     total: number;
     totalPages: number;
+    totalCustomers?: number;
   };
 }
 

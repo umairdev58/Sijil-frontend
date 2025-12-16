@@ -46,10 +46,12 @@ const Customers: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [pagination, setPagination] = useState({
+  const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: 10,
   });
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [formData, setFormData] = useState({
     ename: '',
@@ -70,11 +72,17 @@ const Customers: React.FC = () => {
   const fetchCustomers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await apiService.getCustomers(pagination.page + 1, pagination.pageSize);
+      const response = await apiService.getCustomers({
+        page: paginationModel.page + 1,
+        limit: paginationModel.pageSize,
+        search: searchTerm
+      });
       if (response.success && response.data) {
         // Filter out invalid customers
         const validCustomers = response.data.filter((c: any) => c && typeof c._id === 'string');
         setCustomers(validCustomers);
+        const paginationTotal = response.pagination?.totalCustomers ?? response.pagination?.total ?? validCustomers.length;
+        setTotalCustomers(paginationTotal);
       } else {
         console.log("--------------->",response);
         setError('Failed to load customers');
@@ -85,31 +93,16 @@ const Customers: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.pageSize]);
+  }, [paginationModel.page, paginationModel.pageSize, searchTerm]);
 
   useEffect(() => {
     fetchCustomers();
   }, [fetchCustomers]);
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      fetchCustomers();
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await apiService.searchCustomers(searchQuery);
-      if (response.success && response.data) {
-        // Filter out invalid customers
-        const validCustomers = response.data.filter((c: any) => c && typeof c._id === 'string');
-        setCustomers(validCustomers);
-      }
-    } catch (err) {
-      setError('Search failed');
-    } finally {
-      setLoading(false);
-    }
+    const term = searchQuery.trim();
+    setSearchTerm(term);
+    setPaginationModel((prev) => ({ ...prev, page: 0 }));
   };
 
   const handleSubmit = async () => {
@@ -282,14 +275,20 @@ const Customers: React.FC = () => {
         </Alert>
       )}
 
-      <ToolbarPaper elevation={0} sx={{ mb: 3 }}>
+      <ToolbarPaper elevation={0} sx={{ mb: 3, flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
         <TextField
           placeholder="Search customers by name, email or TRN..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-          sx={{ flexGrow: 1 }}
           size="small"
+          sx={{
+            flexGrow: 1,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '999px',
+              backgroundColor: 'background.paper',
+            }
+          }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -298,9 +297,18 @@ const Customers: React.FC = () => {
             )
           }}
         />
-        <Box display="flex" gap={1}>
-          <Button variant="outlined" onClick={handleSearch} startIcon={<SearchIcon />}>Search</Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>Add Customer</Button>
+        <Box display="flex" gap={1} alignItems="center">
+          <Button
+            variant="outlined"
+            onClick={handleSearch}
+            startIcon={<SearchIcon />}
+            sx={{ ml: { xs: 0, sm: 1 } }}
+          >
+            Search
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleAdd}>
+            Add Customer
+          </Button>
         </Box>
       </ToolbarPaper>
 
@@ -310,11 +318,16 @@ const Customers: React.FC = () => {
           columns={columns}
           loading={loading}
           pagination
-          paginationModel={pagination}
-          onPaginationModelChange={(model) => 
-            setPagination({ page: model.page, pageSize: model.pageSize })
+          paginationMode="server"
+          paginationModel={paginationModel}
+          onPaginationModelChange={(model) =>
+            setPaginationModel((prev) => ({
+              ...prev,
+              ...model
+            }))
           }
-          pageSizeOptions={[10, 25, 50]}
+          pageSizeOptions={[10, 25, 50, 100]}
+          rowCount={totalCustomers}
           getRowId={(row) => {
             if (!row || !row._id) {
               console.warn('Invalid row data detected:', row);
