@@ -39,6 +39,7 @@ import DubaiClearanceInvoices from './pages/DubaiClearanceInvoices';
 import DubaiClearanceInvoiceForm from './pages/DubaiClearanceInvoiceForm';
 import DubaiClearanceDetails from './pages/DubaiClearanceDetails';
 import Statement from './pages/Statement';
+import ManualStatement from './pages/ManualStatement';
 import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -435,13 +436,23 @@ const AppContent: React.FC = () => {
             </RoleRoute>
           }
         />
-        {/* Statement Route */}
+        {/* Statement Routes */}
         <Route
           path="/statement"
           element={
             <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Statement />
+              </AppLayout>
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/statement/manual"
+          element={
+            <RoleRoute roles={['admin']}>
+              <AppLayout>
+                <ManualStatement />
               </AppLayout>
             </RoleRoute>
           }

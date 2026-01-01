@@ -1525,6 +1525,36 @@ class ApiService {
     document.body.removeChild(a);
   }
 
+  async generateContainerStatementPDF(payload: {
+    containerNo: string;
+    products: any[];
+    expenses?: any[];
+    companyName?: string;
+    srNo?: string;
+  }): Promise<void> {
+    // Use fetch to avoid Axios/XHR CORS preflight warnings and extension interception noise
+    const base = (this.api.defaults.baseURL || '').replace(/\/+$/, '');
+    const requestUrl = `${base}/container-statements/generate-pdf`;
+    const resp = await fetch(requestUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw new Error(`Failed to generate PDF (${resp.status})`);
+    const blob = await resp.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `container-statement-${payload.containerNo}-${new Date().toISOString().split('T')[0]}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+  }
+
   async createContainerStatement(data: any): Promise<ApiResponse<any>> {
     const response: AxiosResponse = await this.api.post('/container-statements', data);
     return response.data;
@@ -1537,6 +1567,11 @@ class ApiService {
 
   async addContainerStatementExpense(id: string, expenseData: { description: string; amount: number }): Promise<ApiResponse<any>> {
     const response: AxiosResponse = await this.api.post(`/container-statements/${id}/expenses`, expenseData);
+    return response.data;
+  }
+
+  async updateContainerStatementExpense(id: string, expenseId: string, expenseData: { description: string; amount: number }): Promise<ApiResponse<any>> {
+    const response: AxiosResponse = await this.api.put(`/container-statements/${id}/expenses/${expenseId}`, expenseData);
     return response.data;
   }
 

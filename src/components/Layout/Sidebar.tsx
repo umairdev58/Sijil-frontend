@@ -56,7 +56,6 @@ const menuItems = [
   { text: 'Suppliers', icon: <Building2 size={20} />, path: '/suppliers' },
   { text: 'Users', icon: <UserIcon size={20} />, path: '/users' },
   { text: 'Daily Ledger', icon: <BookOpen size={20} />, path: '/daily-ledger' },
-  { text: 'Statement', icon: <FileText size={20} />, path: '/statement' },
 ];
 
 const salesItems = [
@@ -64,6 +63,11 @@ const salesItems = [
   { text: 'New Sale', path: '/sales/new', icon: <Plus size={18} /> },
   { text: 'Sales Report', path: '/sales-report', icon: <BarChart3 size={18} /> },
   { text: 'Customer Outstanding', path: '/customer-outstanding', icon: <ReceiptIcon size={18} />, badge: 5 },
+];
+
+const statementItems = [
+  { text: 'Search Statement', path: '/statement', icon: <FileText size={18} /> },
+  { text: 'Manual Statement', path: '/statement/manual', icon: <Plus size={18} /> },
 ];
 
 const purchaseItems = [
@@ -119,6 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [openTransport, setOpenTransport] = useState(location.pathname.startsWith('/transport-invoices'));
   const [openDubaiTransport, setOpenDubaiTransport] = useState(location.pathname.startsWith('/dubai-transport-invoices'));
   const [openDubaiClearance, setOpenDubaiClearance] = useState(location.pathname.startsWith('/dubai-clearance-invoices'));
+  const [openStatement, setOpenStatement] = useState(location.pathname.startsWith('/statement'));
 
   // State for popup menus when sidebar is collapsed
   const [salesPopupAnchor, setSalesPopupAnchor] = useState<null | HTMLElement>(null);
@@ -127,6 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [transportPopupAnchor, setTransportPopupAnchor] = useState<null | HTMLElement>(null);
   const [dubaiTransportPopupAnchor, setDubaiTransportPopupAnchor] = useState<null | HTMLElement>(null);
   const [dubaiClearancePopupAnchor, setDubaiClearancePopupAnchor] = useState<null | HTMLElement>(null);
+  const [statementPopupAnchor, setStatementPopupAnchor] = useState<null | HTMLElement>(null);
 
   // Helper functions
   const isSelected = (path: string) => location.pathname === path;
@@ -191,6 +197,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleDubaiClearancePopupClose = () => setDubaiClearancePopupAnchor(null);
+
+  const handleStatementPopupOpen = (event: React.MouseEvent<HTMLElement>) => {
+    if (sidebarCollapsed) {
+      setStatementPopupAnchor(event.currentTarget);
+    } else {
+      setOpenStatement(!openStatement);
+    }
+  };
+
+  const handleStatementPopupClose = () => setStatementPopupAnchor(null);
 
   // Sidebar drawer content
   const drawer = (
@@ -419,6 +435,219 @@ const Sidebar: React.FC<SidebarProps> = ({
               </ListItem>
             );
           })}
+
+          {/* Statement Section */}
+          {!sidebarCollapsed && (
+            <Fade in={!sidebarCollapsed} timeout={300}>
+              <Typography variant="overline" sx={{ 
+                px: 3, 
+                py: 0.5, 
+                mt: 1,
+                color: mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(30, 41, 59, 0.8)', 
+                fontWeight: 600, 
+                letterSpacing: 1,
+                textShadow: mode === 'dark' ? '0 1px 2px rgba(0,0,0,0.3)' : 'none',
+              }}>
+                Statement
+              </Typography>
+            </Fade>
+          )}
+          
+          <ListItem disablePadding sx={{ mb: 0.5, mt: 0.5 }}>
+            <Tooltip 
+              title={sidebarCollapsed ? 'Statement' : ''} 
+              placement="right"
+              arrow
+            >
+              <Box>
+                <ListItemButton
+                  onClick={handleStatementPopupOpen}
+                  sx={{
+                    borderRadius: 2,
+                    mx: 0.5,
+                    py: 2,
+                    px: sidebarCollapsed ? 1 : 3,
+                    minHeight: 44,
+                    transition: 'all 0.2s ease',
+                    background: openStatement 
+                      ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(99, 102, 241, 0.2)') 
+                      : 'transparent',
+                    color: openStatement 
+                      ? (mode === 'dark' ? '#ffffff' : '#1f2937')
+                      : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
+                    fontWeight: openStatement ? 600 : 500,
+                    border: '1px solid transparent',
+                    '&:hover': {
+                      background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    color: 'inherit', 
+                    minWidth: sidebarCollapsed ? 32 : 40,
+                    display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                    '& .MuiSvgIcon-root, & svg': { fontSize: 20 }
+                  }}>
+                    <FileText size={20} />
+                  </ListItemIcon>
+                  {!sidebarCollapsed && (
+                    <Fade in={!sidebarCollapsed} timeout={300}>
+                      <ListItemText primary="Statement" />
+                    </Fade>
+                  )}
+                  {!sidebarCollapsed && (
+                    <Fade in={!sidebarCollapsed} timeout={300}>
+                      {openStatement ? <ExpandLess /> : <ExpandMore />}
+                    </Fade>
+                  )}
+                </ListItemButton>
+              </Box>
+            </Tooltip>
+          </ListItem>
+          
+          {/* Statement Popup Menu for Collapsed Sidebar */}
+          <Menu
+            anchorEl={statementPopupAnchor}
+            open={Boolean(statementPopupAnchor)}
+            onClose={handleStatementPopupClose}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'left',
+            }}
+            PaperProps={{
+              sx: {
+                mt: 1,
+                ml: 1,
+                minWidth: 200,
+                background: mode === 'dark' 
+                  ? 'rgba(15, 23, 42, 0.98)' 
+                  : 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(20px)',
+                border: mode === 'dark' 
+                  ? '1px solid rgba(255, 255, 255, 0.15)' 
+                  : '1px solid rgba(0, 0, 0, 0.1)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                borderRadius: 2,
+                '& .MuiMenuItem-root': {
+                  borderRadius: 2,
+                  mx: 1,
+                  my: 0.5,
+                  color: mode === 'dark' 
+                    ? 'rgba(241, 245, 249, 0.9)' 
+                    : 'rgba(30, 41, 59, 0.9)',
+                  '&:hover': {
+                    background: mode === 'dark' 
+                      ? 'rgba(31, 41, 55, 0.6)' 
+                      : 'rgba(229, 231, 235, 0.6)',
+                    color: mode === 'dark' ? '#ffffff' : '#1e293b',
+                  },
+                  '&.Mui-selected': {
+                    background: mode === 'dark' 
+                      ? 'rgba(31, 41, 55, 0.9)' 
+                      : 'rgba(99, 102, 241, 0.2)',
+                    color: mode === 'dark' ? '#ffffff' : '#1f2937',
+                  },
+                },
+              },
+            }}
+          >
+            {statementItems.map((item) => {
+              const selected = isSelected(item.path);
+              return (
+                <MenuItem
+                  key={item.text}
+                  selected={selected}
+                  onClick={() => {
+                    navigate(item.path);
+                    handleStatementPopupClose();
+                    onMobileToggle();
+                  }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    py: 1.5,
+                    px: 2,
+                  }}
+                >
+                  <Box sx={{ 
+                    color: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}>
+                    {item.icon}
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: selected ? 600 : 500 }}>
+                      {item.text}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              );
+            })}
+          </Menu>
+          
+          <Collapse in={openStatement && !sidebarCollapsed} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding sx={{ 
+              '& .MuiListItem-root': { 
+                padding: 0,
+                margin: '1px 0'
+              },
+              '& .MuiListItemButton-root': {
+                paddingLeft: 6,
+                paddingY: 1.5,
+                marginX: 0.5,
+                borderRadius: 2,
+                background: 'transparent',
+                border: '1px solid transparent',
+                '&:hover': {
+                  background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
+                }
+              }
+            }}>
+              {statementItems.map((sub) => {
+                const selected = isSelected(sub.path);
+                return (
+                  <ListItem key={sub.text} disablePadding>
+                    <ListItemButton
+                      selected={selected}
+                      onClick={() => {
+                        navigate(sub.path);
+                        onMobileToggle();
+                      }}
+                      sx={{ 
+                        pl: 6, 
+                        py: 1.5, 
+                        mx: 0.5, 
+                        borderRadius: 2,
+                        color: selected 
+                          ? (mode === 'dark' ? '#ffffff' : '#1f2937')
+                          : (mode === 'dark' ? 'rgba(241,245,249,0.9)' : '#1f2937'),
+                        background: selected ? (mode === 'dark' ? 'rgba(31, 41, 55, 0.9)' : 'rgba(99, 102, 241, 0.2)') : 'transparent',
+                        border: '1px solid transparent',
+                        '&:hover': {
+                          background: mode === 'dark' ? 'rgba(31, 41, 55, 0.6)' : 'rgba(229,231,235,0.6)',
+                        }
+                      }}
+                    >
+                      <ListItemIcon sx={{ 
+                        color: 'inherit', 
+                        minWidth: 32,
+                        '& .MuiSvgIcon-root': { fontSize: 18 }
+                      }}>
+                        {sub.icon}
+                      </ListItemIcon>
+                      <ListItemText primary={sub.text} />
+                    </ListItemButton>
+                  </ListItem>
+                );
+              })}
+            </List>
+          </Collapse>
 
           {/* Sales Section */}
           {!sidebarCollapsed && (

@@ -26,6 +26,7 @@ import {
   Search as SearchIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
   Print as PrintIcon,
   Download as DownloadIcon,
 } from '@mui/icons-material';
@@ -40,6 +41,7 @@ const Statement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [statementData, setStatementData] = useState<ContainerStatement | null>(null);
   const [newExpense, setNewExpense] = useState({ description: '', amount: '' });
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const { mode } = useAppTheme();
 
   // Sample data structure based on the image
@@ -125,6 +127,7 @@ const Statement: React.FC = () => {
         setStatementData(response.data);
         setProducts(response.data.products || []);
         setExpenses(response.data.expenses || []);
+        resetExpenseForm();
       } else {
         setError(response.message || 'Failed to fetch container statement');
       }
@@ -135,7 +138,27 @@ const Statement: React.FC = () => {
     }
   };
 
-  const handleAddExpense = async () => {
+  const resetExpenseForm = () => {
+    setEditingExpenseId(null);
+    setNewExpense({ description: '', amount: '' });
+  };
+
+  const handleEditExpense = (expense: ContainerStatementExpense) => {
+    if (!expense._id) return;
+    setEditingExpenseId(expense._id);
+    setNewExpense({
+      description: expense.description,
+      amount: expense.amount.toString(),
+    });
+    setError(null);
+  };
+
+  const handleCancelEdit = () => {
+    resetExpenseForm();
+    setError(null);
+  };
+
+  const handleSaveExpense = async () => {
     if (!newExpense.description.trim() || !newExpense.amount) {
       setError('Please fill in both description and amount');
       return;
@@ -153,20 +176,27 @@ const Statement: React.FC = () => {
     }
 
     try {
-      const response = await apiService.addContainerStatementExpense(statementData._id, {
+      const payload = {
         description: newExpense.description.trim(),
         amount: amount,
-      });
+      };
+      let response;
+      if (editingExpenseId) {
+        response = await apiService.updateContainerStatementExpense(statementData._id, editingExpenseId, payload);
+      } else {
+        response = await apiService.addContainerStatementExpense(statementData._id, payload);
+      }
 
       if (response.success && response.data) {
         setExpenses(response.data.expenses || []);
-        setNewExpense({ description: '', amount: '' });
+        resetExpenseForm();
         setError(null);
       } else {
-        setError(response.message || 'Failed to add expense');
+        setError(response.message || (editingExpenseId ? 'Failed to update expense' : 'Failed to add expense'));
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to add expense');
+      const defaultMessage = editingExpenseId ? 'Failed to update expense' : 'Failed to add expense';
+      setError(err.response?.data?.message || defaultMessage);
     }
   };
 
@@ -181,6 +211,7 @@ const Statement: React.FC = () => {
 
       if (response.success && response.data) {
         setExpenses(response.data.expenses || []);
+        resetExpenseForm();
         setError(null);
       } else {
         setError(response.message || 'Failed to remove expense');
@@ -350,15 +381,22 @@ const Statement: React.FC = () => {
                     fullWidth
                     sx={{ mb: 1 }}
                   />
-                  <Button
-                    variant="contained"
-                    onClick={handleAddExpense}
-                    startIcon={<AddIcon />}
-                    fullWidth
-                    size="small"
-                  >
-                    Add Expense
-                  </Button>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveExpense}
+                      startIcon={editingExpenseId ? <EditIcon /> : <AddIcon />}
+                      fullWidth
+                      size="small"
+                    >
+                      {editingExpenseId ? 'Update Expense' : 'Add Expense'}
+                    </Button>
+                    {editingExpenseId && (
+                      <Button variant="text" color="inherit" size="small" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                    )}
+                  </Stack>
                 </Box>
 
                 <Divider sx={{ my: 2 }} />
@@ -395,12 +433,23 @@ const Statement: React.FC = () => {
                             <TableCell align="right">
                               {expense.amount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}
                             </TableCell>
-                            <TableCell align="center">
-                              {isAuto ? (
-                                <Typography variant="caption" color="text.secondary">
-                                  Included
-                                </Typography>
-                              ) : (
+                          <TableCell align="center">
+                            {isAuto ? (
+                              <Typography variant="caption" color="text.secondary">
+                                Included
+                              </Typography>
+                            ) : (
+                              <Stack direction="row" spacing={0.5} justifyContent="center">
+                                {expense._id && (
+                                  <Tooltip title="Edit">
+                                    <IconButton
+                                      size="small"
+                                      onClick={() => handleEditExpense(expense)}
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
                                 <Tooltip title="Delete">
                                   <IconButton
                                     size="small"
@@ -410,8 +459,9 @@ const Statement: React.FC = () => {
                                     <DeleteIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                              )}
-                            </TableCell>
+                              </Stack>
+                            )}
+                          </TableCell>
                           </TableRow>
                         );
                       })}
