@@ -379,6 +379,7 @@ export interface DubaiClearancePayment {
 export interface ContainerStatementProduct {
   srNo: number;
   product: string;
+  description?: string;
   quantity: number;
   unitPrice: number;
   amount: number;

@@ -177,27 +177,14 @@ const SalesPage: React.FC = () => {
   });
 
   // Filter states with default current month filter
-  const getCurrentMonthDates = () => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
-    return {
-      startDate: startOfMonth.toISOString().split('T')[0],
-      endDate: endOfMonth.toISOString().split('T')[0]
-    };
-  };
-
-  const currentMonthDates = getCurrentMonthDates();
-  
   const [filters, setFilters] = useState({
     customer: '',
     supplier: '',
     containerNo: '',
     product: '',
     status: '',
-    startDate: currentMonthDates.startDate,
-    endDate: currentMonthDates.endDate,
+    startDate: '',
+    endDate: '',
     dueStartDate: '',
     dueEndDate: '',
     minAmount: '',
@@ -1091,8 +1078,8 @@ const SalesPage: React.FC = () => {
                     containerNo: '',
                     product: '',
                     status: '',
-                    startDate: currentMonthDates.startDate,
-                    endDate: currentMonthDates.endDate,
+                    startDate: '',
+                    endDate: '',
                     dueStartDate: '',
                     dueEndDate: '',
                     minAmount: '',

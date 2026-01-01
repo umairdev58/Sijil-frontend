@@ -44,9 +44,9 @@ const Statement: React.FC = () => {
 
   // Sample data structure based on the image
   const [products, setProducts] = useState<ContainerStatementProduct[]>([
-    { srNo: 1, product: 'POTATO PAKISTAN', quantity: 1136, unitPrice: 4.50, amount: 5112.00 },
-    { srNo: 2, product: 'POTATO PAKISTAN', quantity: 560, unitPrice: 5.00, amount: 2800.00 },
-    { srNo: 3, product: 'POTATO PAKISTAN', quantity: 2925, unitPrice: 4.75, amount: 13893.75 },
+    { srNo: 1, product: 'POTATO PAKISTAN', description: 'Large red potatoes', quantity: 1136, unitPrice: 4.50, amount: 5112.00 },
+    { srNo: 2, product: 'POTATO PAKISTAN', description: 'Small yellow potatoes', quantity: 560, unitPrice: 5.00, amount: 2800.00 },
+    { srNo: 3, product: 'POTATO PAKISTAN', description: 'Premium washed batch', quantity: 2925, unitPrice: 4.75, amount: 13893.75 },
   ]);
 
   const [expenses, setExpenses] = useState<ContainerStatementExpense[]>([
@@ -59,19 +59,32 @@ const Statement: React.FC = () => {
 
   // Group products by product + unitPrice (rate) and aggregate quantity and amount
   const groupedProducts: ContainerStatementProduct[] = useMemo(() => {
-    const aggregateMap = new Map<string, { product: string; unitPrice: number; quantity: number; amount: number }>();
+    const aggregateMap = new Map<
+      string,
+      {
+        product: string;
+        unitPrice: number;
+        quantity: number;
+        amount: number;
+        description?: string;
+      }
+    >();
     products.forEach((p) => {
       const key = `${p.product}__${p.unitPrice}`;
       const existing = aggregateMap.get(key);
       if (existing) {
         existing.quantity += p.quantity;
         existing.amount += p.amount;
+        if (!existing.description && p.description) {
+          existing.description = p.description;
+        }
       } else {
         aggregateMap.set(key, {
           product: p.product,
           unitPrice: p.unitPrice,
           quantity: p.quantity,
           amount: p.amount,
+          description: p.description,
         });
       }
     });
@@ -82,6 +95,7 @@ const Statement: React.FC = () => {
       .map((item, index) => ({
         srNo: index + 1,
         product: item.product,
+        description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         amount: item.amount,
@@ -284,9 +298,10 @@ const Statement: React.FC = () => {
                       <TableRow>
                         <TableCell>SR #</TableCell>
                         <TableCell>PRODUCT</TableCell>
+                        <TableCell>DESCRIPTION</TableCell>
                         <TableCell align="right">QTY</TableCell>
                         <TableCell align="right">UNIT PRICE</TableCell>
-        <TableCell align="right">Amount (AED)</TableCell>
+                        <TableCell align="right">Amount (AED)</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -294,13 +309,14 @@ const Statement: React.FC = () => {
                         <TableRow key={product.srNo}>
                           <TableCell>{product.srNo}</TableCell>
                           <TableCell>{product.product}</TableCell>
+                          <TableCell>{product.description || '-'}</TableCell>
                           <TableCell align="right">{product.quantity.toLocaleString()}</TableCell>
                           <TableCell align="right">{product.unitPrice.toFixed(2)}</TableCell>
                           <TableCell align="right">{product.amount.toLocaleString('en-AE', { minimumFractionDigits: 2 })}</TableCell>
                         </TableRow>
                       ))}
                       <TableRow sx={{ backgroundColor: mode === 'dark' ? 'grey.800' : 'grey.100' }}>
-                        <TableCell colSpan={2}><strong>Total</strong></TableCell>
+                        <TableCell colSpan={3}><strong>Total</strong></TableCell>
                         <TableCell align="right"><strong>{totalQuantity.toLocaleString()}</strong></TableCell>
                         <TableCell></TableCell>
                         <TableCell align="right"><strong>{grossSale.toLocaleString('en-AE', { minimumFractionDigits: 2 })}</strong></TableCell>
