@@ -158,7 +158,7 @@ const SalesPage: React.FC = () => {
     { id: 'receivedAmount', label: 'Received', visible: true, order: 10 },
     { id: 'outstandingAmount', label: 'Outstanding', visible: true, order: 11, required: true },
     { id: 'status', label: 'Status', visible: true, order: 12, required: true },
-    { id: 'createdAt', label: 'Invoice Created At', visible: true, order: 13 },
+    { id: 'invoiceDate', label: 'Invoice Date', visible: true, order: 13 },
     { id: 'dueDate', label: 'Due Date', visible: false, order: 14 },
     { id: 'actions', label: 'Actions', visible: true, order: 15, required: true },
   ];
@@ -570,10 +570,10 @@ const SalesPage: React.FC = () => {
             size="small"
           />
         );
-      case 'createdAt':
+      case 'invoiceDate':
         return (
           <Typography variant="body2">
-            {sale.createdAt ? new Date(sale.createdAt).toLocaleDateString('en-US', {
+            {sale.invoiceDate ? new Date(sale.invoiceDate).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'short',
               day: 'numeric'
