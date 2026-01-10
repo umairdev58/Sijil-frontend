@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -82,7 +82,7 @@ const SalesPage: React.FC = () => {
   const [expandedRows] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
@@ -101,6 +101,7 @@ const SalesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const [hydratedFromUrl, setHydratedFromUrl] = useState(false);
+  const pageRef = useRef(0); // Track current page in ref to avoid closure issues
   const { mode } = useAppTheme();
   const { user } = useAuth();
   const [searchInput, setSearchInput] = useState('');
@@ -274,7 +275,11 @@ const SalesPage: React.FC = () => {
   // };
 
   const handleChangePage = (event: unknown, newPage: number) => {
+    // Update both state and ref
+    pageRef.current = newPage;
     setPage(newPage);
+    // Fetch with the new page value
+    fetchSales(newPage);
   };
 
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -282,11 +287,13 @@ const SalesPage: React.FC = () => {
     setPage(0);
   };
 
-  const fetchSales = useCallback(async () => {
+  const fetchSales = useCallback(async (pageOverride?: number) => {
     try {
       setLoading(true);
+      // Always use pageOverride if provided, otherwise use ref value (always current)
+      const currentPage = pageOverride !== undefined ? pageOverride : pageRef.current;
       const apiFilters: any = {
-        page: page + 1, // Backend uses 1-based pagination
+        page: currentPage + 1, // Backend uses 1-based pagination
         limit: rowsPerPage,
         search: searchQuery,
         customer: debouncedFilters.customer,
@@ -334,7 +341,9 @@ const SalesPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchQuery, debouncedFilters]);
+    // Remove 'page' from dependencies since we always pass it as pageOverride
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rowsPerPage, searchQuery, debouncedFilters]);
 
   const fetchCustomers = async () => {
     try {
@@ -681,8 +690,14 @@ const SalesPage: React.FC = () => {
       setSearchQuery(qp.search);
       setSearchInput(qp.search);
     }
-    if (qp.page) { setPage(Math.max(0, parseInt(qp.page) || 0)); }
-    if (qp.rows) { setRowsPerPage(Math.max(1, parseInt(qp.rows) || 10)); }
+    if (qp.page) { 
+      const urlPage = Math.max(0, parseInt(qp.page) || 0);
+      pageRef.current = urlPage;
+      setPage(urlPage);
+    }
+    if (qp.rows) { 
+      setRowsPerPage(Math.max(1, parseInt(qp.rows) || 50)); 
+    }
 
     if (needUpdate) {
       setFilters(nextFilters);
@@ -702,37 +717,42 @@ const SalesPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refetch data when pagination changes (only after hydration)
+  // Refetch data when rowsPerPage changes (page changes are handled by handleChangePage)
   useEffect(() => {
     if (!hydratedFromUrl) return;
-    fetchSales();
-  }, [page, rowsPerPage, hydratedFromUrl, fetchSales]);
+    // Only refetch when rowsPerPage changes, use current page from ref
+    fetchSales(pageRef.current);
+  }, [rowsPerPage, hydratedFromUrl, fetchSales]);
 
   // Refetch data when search or filters change
   // Filters are only updated when Apply Filters is clicked or Enter is pressed
   useEffect(() => {
     if (!hydratedFromUrl) return;
     setPage(0);
-    fetchSales();
-  }, [searchQuery, debouncedFilters, hydratedFromUrl, fetchSales]);
+    // Call fetchSales with page 0 explicitly to avoid closure issues
+    fetchSales(0);
+  }, [searchQuery, debouncedFilters, hydratedFromUrl]);
 
   // Initial fetch once hydrated (covers cases with no further changes)
   useEffect(() => {
     if (!hydratedFromUrl) return;
-    fetchSales();
+    fetchSales(pageRef.current);
   }, [hydratedFromUrl, fetchSales]);
 
   // Keep URL in sync with current filter/search/pagination state so that back navigation restores it
   useEffect(() => {
+    if (!hydratedFromUrl) return; // Don't update URL until hydrated
+    
     const qp: any = {};
     const f = debouncedFilters;
     // Only write non-empty filters to keep URL short
     Object.entries(f).forEach(([k, v]) => { if (v) qp[k] = v; });
     if (searchQuery) qp.search = searchQuery;
-    if (page) qp.page = String(page);
-    if (rowsPerPage !== 10) qp.rows = String(rowsPerPage);
+    // Always include page in URL
+    qp.page = String(page);
+    if (rowsPerPage !== 50) qp.rows = String(rowsPerPage);
     setSearchParams(qp, { replace: true });
-  }, [debouncedFilters, searchQuery, page, rowsPerPage, setSearchParams]);
+  }, [debouncedFilters, searchQuery, page, rowsPerPage, setSearchParams, hydratedFromUrl]);
 
   if (loading) {
     return (
