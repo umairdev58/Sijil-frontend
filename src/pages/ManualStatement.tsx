@@ -20,6 +20,8 @@ import {
   Stack,
   Chip,
   Paper,
+  CircularProgress,
+  InputAdornment,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -28,6 +30,7 @@ import {
   Print as PrintIcon,
   Download as DownloadIcon,
   ContentCopy as ContentCopyIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import apiService from '../services/api';
@@ -35,9 +38,11 @@ import { ContainerStatementProduct, ContainerStatementExpense } from '../types';
 
 const ManualStatement: React.FC = () => {
   const [containerNo, setContainerNo] = useState('');
+  const [searchContainerNo, setSearchContainerNo] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [srNo, setSrNo] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const { mode } = useAppTheme();
 
   // Product form state
@@ -214,6 +219,43 @@ const ManualStatement: React.FC = () => {
     setExpenses(expenses.filter((e) => e._id !== id));
   };
 
+  const handleSearch = async () => {
+    if (!searchContainerNo.trim()) {
+      setError('Please enter a container number to search');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiService.getContainerStatement(searchContainerNo.trim());
+      
+      if (response.success && response.data) {
+        // Populate form with fetched data
+        setContainerNo(response.data.containerNo || searchContainerNo.trim());
+        
+        // Ensure products have correct srNo
+        const loadedProducts = (response.data.products || []).map((p: ContainerStatementProduct, index: number) => ({
+          ...p,
+          srNo: p.srNo || index + 1,
+        }));
+        setProducts(loadedProducts);
+        
+        setExpenses(response.data.expenses || []);
+        // Note: companyName and srNo are not stored in the statement, they're only used for PDF generation
+        // So we'll leave them empty for now
+        setError(null);
+      } else {
+        setError(response.message || 'Failed to fetch container statement');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to fetch container statement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -272,6 +314,43 @@ const ManualStatement: React.FC = () => {
           {error}
         </Alert>
       )}
+
+      {/* Search Section */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+            <TextField
+              label="Search Container Number"
+              value={searchContainerNo}
+              onChange={(e) => setSearchContainerNo(e.target.value)}
+              variant="outlined"
+              size="small"
+              sx={{ minWidth: 250 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch();
+                }
+              }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleSearch}
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} /> : <SearchIcon />}
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+            >
+              {loading ? 'Searching...' : 'Search'}
+            </Button>
+          </Stack>
+        </CardContent>
+      </Card>
 
       {/* Container Number and Additional Fields */}
       <Card sx={{ mb: 3 }}>
