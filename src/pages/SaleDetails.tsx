@@ -110,6 +110,7 @@ const SaleDetails: React.FC = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -251,14 +252,16 @@ const SaleDetails: React.FC = () => {
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        const [custRes, suppRes] = await Promise.all([
+        const [custRes, suppRes, prodRes] = await Promise.all([
           apiService.getCustomers({ fetchAll: true }),
-          (apiService as any).getSuppliers ? (apiService as any).getSuppliers(1, 100) : Promise.resolve({ success: true, data: [] })
+          (apiService as any).getSuppliers ? (apiService as any).getSuppliers(1, 100) : Promise.resolve({ success: true, data: [] }),
+          apiService.getProducts({ all: true })
         ]);
         if (custRes?.success && custRes.data) setCustomers(custRes.data);
         if (suppRes?.success && (suppRes as any).data) setSuppliers((suppRes as any).data);
+        if (prodRes?.success && prodRes.data) setProducts(prodRes.data);
       } catch (e) {
-        console.warn('Failed to load customers/suppliers');
+        console.warn('Failed to load customers/suppliers/products');
       }
     };
     if (isFormMode) loadLookups();
@@ -665,12 +668,39 @@ const SaleDetails: React.FC = () => {
                 ))}
               </Select>
             </FormControl>
-            <AutocompleteTextField
+            <Autocomplete
               fullWidth
-              label="Product"
-              field="product"
-              value={sale.product || ''}
-              onChange={(value) => handleInputChange('product', value)}
+              options={products.filter(p => p.isActive)}
+              getOptionLabel={(option) => option?.name || ''}
+              isOptionEqualToValue={(option, value) => option?._id === value?._id}
+              value={products.find((p) => p.name === sale?.product) || null}
+              onChange={(_, value) => handleInputChange('product', value?.name || '')}
+              inputValue={sale?.product || ''}
+              onInputChange={(_, value, reason) => {
+                if (reason === 'reset') return;
+                handleInputChange('product', value);
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Product"
+                  error={Boolean(fieldErrors.product)}
+                  helperText={fieldErrors.product}
+                />
+              )}
+              noOptionsText="No product found"
+              renderOption={(props, option) => (
+                <li {...props} key={option._id}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="body1">{option.name}</Typography>
+                    {option.category && (
+                      <Typography variant="caption" color="text.secondary">
+                        {typeof option.category === 'object' ? option.category.name : 'Category'}
+                      </Typography>
+                    )}
+                  </Box>
+                </li>
+              )}
             />
           </Box>
           

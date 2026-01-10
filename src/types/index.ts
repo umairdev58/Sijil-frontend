@@ -201,6 +201,11 @@ export interface PaginatedResponse<T> {
     total: number;
     totalPages: number;
     totalCustomers?: number;
+    totalCategories?: number;
+    totalProducts?: number;
+    categoriesPerPage?: number;
+    productsPerPage?: number;
+    customersPerPage?: number;
   };
 }
 
@@ -230,7 +235,18 @@ export interface ProductOutstanding {
   customers: CustomerOutstanding[];
 }
 
-export type OutstandingData = CustomerOutstanding | ProductOutstanding;
+export interface CategoryOutstanding {
+  _id: string;
+  categoryName: string;
+  totalOutstanding: number;
+  totalAmount: number;
+  totalReceived: number;
+  totalInvoices: number;
+  totalCustomers: number;
+  customers: CustomerOutstanding[];
+}
+
+export type OutstandingData = CustomerOutstanding | ProductOutstanding | CategoryOutstanding;
 
 export interface FreightInvoice {
   _id: string;
@@ -401,6 +417,31 @@ export interface ContainerStatement {
   totalExpenses: number;
   netSale: number;
   totalQuantity: number;
+  createdBy: string | User;
+  updatedBy?: string | User;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Category {
+  _id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  createdBy: string | User;
+  updatedBy?: string | User;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Product {
+  _id: string;
+  name: string;
+  description?: string;
+  category: string | Category;
+  sku?: string;
+  unit: string;
+  isActive: boolean;
   createdBy: string | User;
   updatedBy?: string | User;
   createdAt: string;

@@ -36,7 +36,9 @@ import {
   BookOpen, 
   Truck, 
   Ship, 
-  FileText 
+  FileText,
+  Tags,
+  Package
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -54,6 +56,8 @@ const menuItems = [
   { text: 'Executive Dashboard', icon: <BarChart3 size={20} />, path: '/executive-dashboard' },
   { text: 'Customers', icon: <Users size={20} />, path: '/customers' },
   { text: 'Suppliers', icon: <Building2 size={20} />, path: '/suppliers' },
+  { text: 'Categories', icon: <Tags size={20} />, path: '/categories' },
+  { text: 'Products', icon: <Package size={20} />, path: '/products' },
   { text: 'Users', icon: <UserIcon size={20} />, path: '/users' },
   { text: 'Daily Ledger', icon: <BookOpen size={20} />, path: '/daily-ledger' },
 ];
