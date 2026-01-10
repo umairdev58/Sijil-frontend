@@ -359,14 +359,20 @@ const SaleDetails: React.FC = () => {
       if (isNewSale) {
         const response = await apiService.createSale(saleData);
         if (response.success && response.data) {
-          navigate(`/sales?newSale=true`);
+          // Preserve query params from location.search and add newSale=true
+          const queryParams = new URLSearchParams(location.search);
+          queryParams.set('newSale', 'true');
+          const queryString = queryParams.toString();
+          navigate(queryString ? `/sales?${queryString}` : '/sales?newSale=true');
         } else {
           setError(response.message || 'Failed to create sale');
         }
       } else {
         const response = await apiService.updateSale(id!, saleData);
         if (response.success && response.sale) {
-          navigate(`/sales/${id}`);
+          // Preserve query params from location.search when navigating back to sales page
+          const queryString = location.search;
+          navigate(queryString ? `/sales${queryString}` : '/sales');
         } else {
           setError(response.message || 'Failed to update sale');
         }
@@ -398,8 +404,12 @@ const SaleDetails: React.FC = () => {
   const handleCancel = () => {
     if (isNewSale) {
       navigate(`/sales${location.search}`);
+    } else if (isEditMode) {
+      // When canceling from edit mode, go back to sales page with filters preserved
+      navigate(`/sales${location.search}`);
     } else {
-      navigate(`/sales/${id}`);
+      // When canceling from view mode, go back to detail view with query params preserved
+      navigate(`/sales/${id}${location.search}`);
     }
   };
 
@@ -852,7 +862,7 @@ const SaleDetails: React.FC = () => {
         <Button
           variant="outlined"
           startIcon={<EditIcon />}
-          onClick={() => navigate(`/sales/${id}/edit`)}
+          onClick={() => navigate(`/sales/${id}/edit${location.search}`)}
         >
           Edit Sale
         </Button>
