@@ -21,6 +21,11 @@ import {
   Stack,
   InputAdornment,
   Chip,
+  TablePagination,
+  Paper,
+  Collapse,
+  Fade,
+  Slide,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -29,6 +34,10 @@ import {
   Edit as EditIcon,
   Print as PrintIcon,
   Download as DownloadIcon,
+  Visibility as VisibilityIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import apiService from '../services/api';
@@ -42,6 +51,11 @@ const Statement: React.FC = () => {
   const [statementData, setStatementData] = useState<ContainerStatement | null>(null);
   const [newExpense, setNewExpense] = useState({ description: '', amount: '' });
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [containerList, setContainerList] = useState<any[]>([]);
+  const [containerListLoading, setContainerListLoading] = useState(false);
+  const [containerListPage, setContainerListPage] = useState(1);
+  const [containerListTotal, setContainerListTotal] = useState(0);
+  const [showSearchAndList, setShowSearchAndList] = useState(true);
   const { mode } = useAppTheme();
 
   // Sample data structure based on the image
@@ -109,6 +123,52 @@ const Statement: React.FC = () => {
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const netSale = grossSale - totalExpenses;
 
+  // Fetch container list on mount
+  React.useEffect(() => {
+    fetchContainerList();
+  }, []);
+
+  const fetchContainerList = async (page = 1) => {
+    try {
+      setContainerListLoading(true);
+      const response = await apiService.getAllContainerStatements(page, 50, '');
+      if (response.success) {
+        setContainerList(response.data || []);
+        setContainerListTotal(response.pagination?.total || 0);
+        setContainerListPage(page);
+      }
+    } catch (err) {
+      console.error('Failed to fetch container list:', err);
+    } finally {
+      setContainerListLoading(false);
+    }
+  };
+
+  const handleContainerClick = async (containerNumber: string) => {
+    setContainerNo(containerNumber);
+    setLoading(true);
+    setError(null);
+    // Hide search and list when a container is selected
+    setShowSearchAndList(false);
+
+    try {
+      const response = await apiService.getContainerStatement(containerNumber);
+      
+      if (response.success && response.data) {
+        setStatementData(response.data);
+        setProducts(response.data.products || []);
+        setExpenses(response.data.expenses || []);
+        resetExpenseForm();
+      } else {
+        setError(response.message || 'Failed to fetch container statement');
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to fetch container statement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = async () => {
     if (!containerNo.trim()) {
       setError('Please enter a container number');
@@ -117,6 +177,8 @@ const Statement: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    // Hide search and list when searching
+    setShowSearchAndList(false);
 
     try {
       const response = await apiService.getContainerStatement(containerNo);
@@ -245,69 +307,244 @@ const Statement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-        Container Statement
-      </Typography>
-
-      {/* Search Section */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <TextField
-              label="Container Number"
-              value={containerNo}
-              onChange={(e) => setContainerNo(e.target.value)}
-              variant="outlined"
-              size="small"
-              sx={{ minWidth: 200 }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Container Statement
+        </Typography>
+        {statementData && !showSearchAndList && (
+          <Fade in={!showSearchAndList} timeout={500}>
             <Button
-              variant="contained"
-              onClick={handleSearch}
-              disabled={loading}
-              startIcon={loading ? <CircularProgress size={20} /> : <SearchIcon />}
+              variant="outlined"
+              onClick={() => setShowSearchAndList(true)}
+              startIcon={<SearchIcon />}
+              sx={{ 
+                borderRadius: 999, 
+                textTransform: 'none', 
+                fontWeight: 600,
+                transition: 'all 0.3s ease-in-out',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  boxShadow: 4,
+                }
+              }}
             >
-              {loading ? 'Searching...' : 'Search'}
+              Show Search & List
             </Button>
-            {statementData && (
-              <>
-                <Button
+          </Fade>
+        )}
+      </Box>
+
+      {/* Search Section with Collapse Animation */}
+      <Collapse in={showSearchAndList} timeout={500}>
+        <Fade in={showSearchAndList} timeout={500}>
+          <Card 
+            sx={{ 
+              mb: 3,
+              transition: 'all 0.3s ease-in-out',
+              boxShadow: showSearchAndList ? 3 : 0,
+            }}
+          >
+            <CardContent>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <TextField
+                  label="Container Number"
+                  value={containerNo}
+                  onChange={(e) => setContainerNo(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                    }
+                  }}
                   variant="outlined"
-                  onClick={handlePrint}
-                  startIcon={<PrintIcon />}
-                  sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
-                >
-                  Print
-                </Button>
+                  size="small"
+                  sx={{ minWidth: 200 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
                 <Button
-                  variant="outlined"
-                  onClick={handleDownload}
-                  startIcon={<DownloadIcon />}
-                  sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+                  variant="contained"
+                  onClick={handleSearch}
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : <SearchIcon />}
+                  sx={{
+                    transition: 'all 0.3s ease-in-out',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: 4,
+                    }
+                  }}
                 >
-                  Download PDF
+                  {loading ? 'Searching...' : 'Search'}
                 </Button>
-              </>
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
+                {statementData && (
+                  <>
+                    <Button
+                      variant="outlined"
+                      onClick={handlePrint}
+                      startIcon={<PrintIcon />}
+                      sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Print
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={handleDownload}
+                      startIcon={<DownloadIcon />}
+                      sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+                    >
+                      Download PDF
+                    </Button>
+                  </>
+                )}
+              </Stack>
+            </CardContent>
+          </Card>
+        </Fade>
+      </Collapse>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
+        <Fade in={!!error} timeout={300}>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        </Fade>
       )}
 
+      {/* Container Numbers List with Slide Animation */}
+      <Collapse in={showSearchAndList} timeout={600}>
+        <Slide direction="down" in={showSearchAndList} timeout={600}>
+          <Card 
+            sx={{ 
+              mb: 3,
+              transition: 'all 0.3s ease-in-out',
+              boxShadow: showSearchAndList ? 3 : 0,
+            }}
+          >
+            <CardHeader 
+              title="All Container Numbers"
+              action={
+                <IconButton
+                  onClick={() => setShowSearchAndList(false)}
+                  sx={{
+                    transition: 'all 0.3s ease-in-out',
+                    '&:hover': {
+                      transform: 'rotate(90deg)',
+                      color: 'error.main',
+                    }
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              }
+            />
+            <CardContent>
+              {containerListLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <>
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell><strong>Container Number</strong></TableCell>
+                          <TableCell><strong>Created Date</strong></TableCell>
+                          <TableCell align="center"><strong>Actions</strong></TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {containerList.map((statement, index) => (
+                          <Fade 
+                            key={statement._id} 
+                            in={showSearchAndList} 
+                            timeout={300 + index * 50}
+                          >
+                            <TableRow 
+                              hover
+                              sx={{ 
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease-in-out',
+                                '&:hover': { 
+                                  backgroundColor: mode === 'dark' ? 'grey.800' : 'grey.50',
+                                  transform: 'translateX(4px)',
+                                }
+                              }}
+                              onClick={() => handleContainerClick(statement.containerNo)}
+                            >
+                              <TableCell>{statement.containerNo}</TableCell>
+                              <TableCell>
+                                {statement.createdAt 
+                                  ? new Date(statement.createdAt).toLocaleDateString('en-US', {
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  : '-'}
+                              </TableCell>
+                              <TableCell align="center">
+                                <Tooltip title="View Statement">
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleContainerClick(statement.containerNo);
+                                    }}
+                                    color="primary"
+                                    sx={{
+                                      transition: 'all 0.2s ease-in-out',
+                                      '&:hover': {
+                                        transform: 'scale(1.2)',
+                                      }
+                                    }}
+                                  >
+                                    <VisibilityIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </TableCell>
+                            </TableRow>
+                          </Fade>
+                        ))}
+                        {containerList.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={3} align="center" sx={{ py: 4 }}>
+                              <Typography variant="body2" color="text.secondary">
+                                No container statements found
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                  {containerListTotal > 50 && (
+                    <TablePagination
+                      component="div"
+                      count={containerListTotal}
+                      rowsPerPage={50}
+                      page={containerListPage - 1}
+                      onPageChange={(event, newPage) => {
+                        fetchContainerList(newPage + 1);
+                      }}
+                      rowsPerPageOptions={[]}
+                      labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
+                    />
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </Slide>
+      </Collapse>
+
       {statementData && (
-        <Box>
+        <Fade in={!!statementData} timeout={800}>
+          <Box>
           {/* Container Info */}
           <Card sx={{ mb: 3 }}>
             <CardHeader
@@ -508,6 +745,7 @@ const Statement: React.FC = () => {
             </CardContent>
           </Card>
         </Box>
+        </Fade>
       )}
 
       {loading && <LoadingSpinner size="fullscreen" variant="spinner" message="Loading container statement..." />}
