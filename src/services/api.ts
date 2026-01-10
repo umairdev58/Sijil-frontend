@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { User, Customer, Supplier, Sales, Payment, LoginCredentials, ChangePasswordData, ApiResponse, PaginatedResponse, SaleApiResponse, Purchase, DailyLedger, LedgerEntry, LedgerSummary, FreightInvoice, TransportInvoice, FreightPayment, TransportPayment, DubaiTransportInvoice, DubaiClearanceInvoice, DubaiTransportPayment, DubaiClearancePayment, CustomerQueryOptions } from '../types';
+import { User, Customer, Supplier, Sales, Payment, LoginCredentials, ChangePasswordData, ApiResponse, PaginatedResponse, SaleApiResponse, Purchase, DailyLedger, LedgerEntry, LedgerSummary, FreightInvoice, TransportInvoice, FreightPayment, TransportPayment, DubaiTransportInvoice, DubaiClearanceInvoice, DubaiTransportPayment, DubaiClearancePayment, CustomerQueryOptions, Category, Product } from '../types';
 
 // Add interface for sales filter parameters
 export interface SalesFilterParams {
@@ -658,9 +658,11 @@ class ApiService {
     limit?: number;
     sortBy?: string;
     sortOrder?: string;
-    groupBy?: 'customer' | 'product';
+    groupBy?: 'customer' | 'product' | 'category';
     product?: string;
     products?: string[];
+    category?: string;
+    categories?: string[];
   } = {}): Promise<{ 
     success: boolean; 
     data: any[]; 
@@ -707,7 +709,9 @@ class ApiService {
     status?: string;
     product?: string;
     products?: string[];
-    groupBy?: 'customer' | 'product';
+    category?: string;
+    categories?: string[];
+    groupBy?: 'customer' | 'product' | 'category';
   } = {}): Promise<void> {
     const params = new URLSearchParams();
     
@@ -1589,6 +1593,153 @@ class ApiService {
 
   async deleteContainerStatement(id: string): Promise<ApiResponse<null>> {
     const response: AxiosResponse = await this.api.delete(`/container-statements/${id}`);
+    return response.data;
+  }
+
+  // Category endpoints
+  async getCategories(options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean | string;
+    all?: boolean;
+  } = {}): Promise<PaginatedResponse<Category>> {
+    const { page = 1, limit = 10, search, isActive, all } = options;
+    const params = new URLSearchParams();
+
+    if (all) {
+      params.append('all', 'true');
+    } else {
+      params.append('page', String(page));
+      params.append('limit', String(limit));
+    }
+
+    if (typeof search === 'string' && search.trim() !== '') {
+      params.append('search', search.trim());
+    }
+
+    if (isActive !== undefined && isActive !== '') {
+      params.append('isActive', typeof isActive === 'boolean' ? String(isActive) : isActive);
+    }
+
+    const response: AxiosResponse = await this.api.get(`/categories?${params.toString()}`);
+    return response.data;
+  }
+
+  async getCategory(id: string): Promise<ApiResponse<Category>> {
+    const response: AxiosResponse = await this.api.get(`/categories/${id}`);
+    return response.data;
+  }
+
+  async createCategory(categoryData: Partial<Category>): Promise<ApiResponse<Category>> {
+    const response: AxiosResponse = await this.api.post('/categories', categoryData);
+    return response.data;
+  }
+
+  async updateCategory(id: string, categoryData: Partial<Category>): Promise<ApiResponse<Category>> {
+    const response: AxiosResponse = await this.api.put(`/categories/${id}`, categoryData);
+    return response.data;
+  }
+
+  async deleteCategory(id: string): Promise<ApiResponse<null>> {
+    const response: AxiosResponse = await this.api.delete(`/categories/${id}`);
+    return response.data;
+  }
+
+  async activateCategory(id: string): Promise<ApiResponse<null>> {
+    const response: AxiosResponse = await this.api.post(`/categories/${id}/activate`);
+    return response.data;
+  }
+
+  async searchCategories(query: string, limit?: number): Promise<ApiResponse<Category[]>> {
+    const encoded = encodeURIComponent(query);
+    const params = new URLSearchParams();
+    if (limit !== undefined) {
+      params.append('limit', String(limit));
+    }
+    const url = `/categories/search/${encoded}` + (params.toString() ? `?${params.toString()}` : '');
+    const response: AxiosResponse = await this.api.get(url);
+    return response.data;
+  }
+
+  // Product endpoints
+  async getProducts(options: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    category?: string;
+    isActive?: boolean | string;
+    all?: boolean;
+  } = {}): Promise<PaginatedResponse<Product>> {
+    const { page = 1, limit = 10, search, category, isActive, all } = options;
+    const params = new URLSearchParams();
+
+    if (all) {
+      params.append('all', 'true');
+    } else {
+      params.append('page', String(page));
+      params.append('limit', String(limit));
+    }
+
+    if (typeof search === 'string' && search.trim() !== '') {
+      params.append('search', search.trim());
+    }
+
+    if (category) {
+      params.append('category', category);
+    }
+
+    if (isActive !== undefined && isActive !== '') {
+      params.append('isActive', typeof isActive === 'boolean' ? String(isActive) : isActive);
+    }
+
+    const response: AxiosResponse = await this.api.get(`/products?${params.toString()}`);
+    return response.data;
+  }
+
+  async getProduct(id: string): Promise<ApiResponse<Product>> {
+    const response: AxiosResponse = await this.api.get(`/products/${id}`);
+    return response.data;
+  }
+
+  async createProduct(productData: Partial<Product>): Promise<ApiResponse<Product>> {
+    const response: AxiosResponse = await this.api.post('/products', productData);
+    return response.data;
+  }
+
+  async updateProduct(id: string, productData: Partial<Product>): Promise<ApiResponse<Product>> {
+    const response: AxiosResponse = await this.api.put(`/products/${id}`, productData);
+    return response.data;
+  }
+
+  async deleteProduct(id: string): Promise<ApiResponse<null>> {
+    const response: AxiosResponse = await this.api.delete(`/products/${id}`);
+    return response.data;
+  }
+
+  async activateProduct(id: string): Promise<ApiResponse<null>> {
+    const response: AxiosResponse = await this.api.post(`/products/${id}/activate`);
+    return response.data;
+  }
+
+  async searchProducts(query: string, limit?: number): Promise<ApiResponse<Product[]>> {
+    const encoded = encodeURIComponent(query);
+    const params = new URLSearchParams();
+    if (limit !== undefined) {
+      params.append('limit', String(limit));
+    }
+    const url = `/products/search/${encoded}` + (params.toString() ? `?${params.toString()}` : '');
+    const response: AxiosResponse = await this.api.get(url);
+    return response.data;
+  }
+
+  async getProductsByCategory(categoryId: string, isActive?: boolean): Promise<ApiResponse<Product[]>> {
+    const params = new URLSearchParams();
+    if (isActive !== undefined) {
+      params.append('isActive', String(isActive));
+    }
+    const url = `/products/category/${categoryId}` + (params.toString() ? `?${params.toString()}` : '');
+    const response: AxiosResponse = await this.api.get(url);
     return response.data;
   }
 }

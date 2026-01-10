@@ -58,13 +58,15 @@ const CustomerOutstandingPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [uniqueProducts, setUniqueProducts] = useState<string[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   // Filter states
   const [filters, setFilters] = useState({
     minAmount: '',
     maxAmount: '',
     status: '',
     products: [] as string[],
-    groupBy: 'customer' as 'customer' | 'product',
+    categories: [] as string[],
+    groupBy: 'customer' as 'customer' | 'product' | 'category',
   });
 
   // Summary statistics
@@ -87,6 +89,7 @@ const CustomerOutstandingPage: React.FC = () => {
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
         status: filters.status || undefined,
         products: filters.groupBy === 'product' ? filters.products : undefined,
+        categories: filters.groupBy === 'category' ? filters.categories : undefined,
         groupBy: filters.groupBy,
         page: page + 1,
         limit: rowsPerPage,
@@ -116,6 +119,17 @@ const CustomerOutstandingPage: React.FC = () => {
     }
   }, []);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const response = await apiService.getCategories({ all: true });
+      if (response.success && response.data) {
+        setCategories(response.data.filter((c: any) => c.isActive));
+      }
+    } catch (error: any) {
+      console.error('Error fetching categories:', error);
+    }
+  }, []);
+
   const handleDownloadPDF = async () => {
     try {
       setDownloadingPDF(true);
@@ -126,6 +140,7 @@ const CustomerOutstandingPage: React.FC = () => {
         maxAmount: filters.maxAmount ? Number(filters.maxAmount) : undefined,
         status: filters.status || undefined,
         products: filters.groupBy === 'product' ? filters.products : undefined,
+        categories: filters.groupBy === 'category' ? filters.categories : undefined,
         groupBy: filters.groupBy,
       });
 
@@ -174,7 +189,8 @@ const CustomerOutstandingPage: React.FC = () => {
   // Initial data load
   useEffect(() => {
     fetchUniqueProducts();
-  }, [fetchUniqueProducts]);
+    fetchCategories();
+  }, [fetchUniqueProducts, fetchCategories]);
 
   // Fetch data when dependencies change
   useEffect(() => {
@@ -184,8 +200,15 @@ const CustomerOutstandingPage: React.FC = () => {
   const handleFilterChange = (field: string, value: string | string[]) => {
     setFilters(prev => {
       const next = { ...prev, [field]: value } as typeof prev;
-      if (field === 'groupBy' && typeof value === 'string' && value === 'customer') {
-        next.products = [];
+      if (field === 'groupBy' && typeof value === 'string') {
+        if (value === 'customer') {
+          next.products = [];
+          next.categories = [];
+        } else if (value === 'product') {
+          next.categories = [];
+        } else if (value === 'category') {
+          next.products = [];
+        }
       }
       return next;
     });
@@ -205,12 +228,27 @@ const CustomerOutstandingPage: React.FC = () => {
     setFilters(prev => ({ ...prev, products: [] }));
   };
 
+  const handleCategoryToggle = (categoryId: string) => {
+    setFilters(prev => {
+      const isSelected = prev.categories.includes(categoryId);
+      const categories = isSelected
+        ? prev.categories.filter(cat => cat !== categoryId)
+        : [...prev.categories, categoryId];
+      return { ...prev, categories };
+    });
+  };
+
+  const handleClearCategorySelection = () => {
+    setFilters(prev => ({ ...prev, categories: [] }));
+  };
+
   const handleClearFilters = () => {
     setFilters({
       minAmount: '',
       maxAmount: '',
       status: '',
       products: [],
+      categories: [],
       groupBy: 'customer',
     });
     setSearchInput('');
@@ -393,8 +431,66 @@ const CustomerOutstandingPage: React.FC = () => {
               >
                 <MenuItem value="customer">Customer</MenuItem>
                 <MenuItem value="product">Product</MenuItem>
+                <MenuItem value="category">Category</MenuItem>
               </Select>
             </FormControl>
+
+            {filters.groupBy === 'category' && (
+              <FormControl sx={{ minWidth: 260 }}>
+                <InputLabel id="category-multi-select-label" shrink>
+                  Categories
+                </InputLabel>
+                <Select
+                  labelId="category-multi-select-label"
+                  multiple
+                  displayEmpty
+                  label="Categories"
+                  value={filters.categories}
+                  onChange={(event) => {
+                    const { value } = event.target;
+                    const nextValue = typeof value === 'string' ? value.split(',') : value;
+                    handleFilterChange('categories', nextValue);
+                  }}
+                  input={<OutlinedInput label="Categories" notched />}
+                  renderValue={(selected) => {
+                    const values = selected as string[];
+                    if (!values || values.length === 0) {
+                      return <Typography color="text.secondary">Select categories</Typography>;
+                    }
+                    if (values.length <= 2) {
+                      return values.map(id => {
+                        const cat = categories.find(c => c._id === id);
+                        return cat ? cat.name : id;
+                      }).join(', ');
+                    }
+                    return `${values.length} selected`;
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: { maxHeight: 320, width: 260 },
+                    },
+                  }}
+                >
+                  {categories?.map((category) => (
+                    <MenuItem key={category._id} value={category._id}>
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <Checkbox
+                          checked={filters.categories.includes(category._id)}
+                          size="small"
+                          edge="start"
+                          tabIndex={-1}
+                          disableRipple
+                        />
+                      </ListItemIcon>
+                      <ListItemText primary={category.name} />
+                    </MenuItem>
+                  ))}
+                  {categories?.length === 0 && (
+                    <MenuItem disabled>No categories available</MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+            )}
 
             {filters.groupBy === 'product' && (
               <FormControl sx={{ minWidth: 260 }}>
@@ -515,10 +611,10 @@ const CustomerOutstandingPage: React.FC = () => {
       {/* Table */}
       {!loading && outstandingData.length > 0 && (
         <Paper>
-          {filters.groupBy === 'product' ? (
-            // Product Grouped View - Compact and Theme-Consistent
+          {filters.groupBy === 'product' || filters.groupBy === 'category' ? (
+            // Product/Category Grouped View - Compact and Theme-Consistent
             <Box>
-              {filters.products.length > 0 && (
+              {filters.groupBy === 'product' && filters.products.length > 0 && (
                 <Box sx={{ p: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   {filters.products.map((product) => (
                     <Chip
@@ -538,11 +634,12 @@ const CustomerOutstandingPage: React.FC = () => {
                   </Button>
                 </Box>
               )}
-              {outstandingData?.map((productData) => {
-                const product = productData as ProductOutstanding;
+              {outstandingData?.map((groupData) => {
+                const group = groupData as any;
+                const groupName = filters.groupBy === 'category' ? group.categoryName : (group as ProductOutstanding).productName;
                 return (
-                  <Box key={product._id} sx={{ mb: 3 }}>
-                    {/* Product Header - Compact */}
+                  <Box key={group._id} sx={{ mb: 3 }}>
+                    {/* Group Header - Compact */}
                     <Box sx={{ 
                       p: 2, 
                       bgcolor: mode === 'dark' ? '#1e293b' : '#f8fafc', 
@@ -554,15 +651,15 @@ const CustomerOutstandingPage: React.FC = () => {
                         color: mode === 'dark' ? '#f1f5f9' : '#1e293b',
                         mb: 0.5
                       }}>
-                        {product.productName}
+                        {groupName}
                       </Typography>
                       <Typography variant="body2" sx={{ 
                         color: mode === 'dark' ? '#94a3b8' : '#64748b',
                         fontSize: '0.875rem'
                       }}>
-                        Total Outstanding: AED {product.totalOutstanding.toLocaleString()} | 
-                        {product.totalCustomers} Customer{product.totalCustomers !== 1 ? 's' : ''} | 
-                        {product.totalInvoices} Invoice{product.totalInvoices !== 1 ? 's' : ''}
+                        Total Outstanding: AED {group.totalOutstanding.toLocaleString()} | 
+                        {group.totalCustomers} Customer{group.totalCustomers !== 1 ? 's' : ''} | 
+                        {group.totalInvoices} Invoice{group.totalInvoices !== 1 ? 's' : ''}
                       </Typography>
                     </Box>
 
@@ -630,7 +727,7 @@ const CustomerOutstandingPage: React.FC = () => {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {product.customers?.map((customer) => (
+                          {group.customers?.map((customer: any) => (
                             <TableRow key={customer._id} hover>
                               <TableCell sx={{ 
                                 borderColor: mode === 'dark' ? '#334155' : '#e2e8f0'

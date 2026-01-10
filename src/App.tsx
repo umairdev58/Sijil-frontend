@@ -15,6 +15,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import Customers from './pages/Customers';
+import Categories from './pages/Categories';
+import Products from './pages/Products';
 import Sales from './pages/Sales';
 import SalesReport from './pages/SalesReport';
 import PurchaseReport from './pages/PurchaseReport';
@@ -108,6 +110,26 @@ const AppContent: React.FC = () => {
             <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Customers />
+              </AppLayout>
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/categories"
+          element={
+            <RoleRoute roles={['admin']}>
+              <AppLayout>
+                <Categories />
+              </AppLayout>
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            <RoleRoute roles={['admin']}>
+              <AppLayout>
+                <Products />
               </AppLayout>
             </RoleRoute>
           }
