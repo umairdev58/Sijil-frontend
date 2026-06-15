@@ -228,20 +228,6 @@ const CustomerOutstandingPage: React.FC = () => {
     setFilters(prev => ({ ...prev, products: [] }));
   };
 
-  const handleCategoryToggle = (categoryId: string) => {
-    setFilters(prev => {
-      const isSelected = prev.categories.includes(categoryId);
-      const categories = isSelected
-        ? prev.categories.filter(cat => cat !== categoryId)
-        : [...prev.categories, categoryId];
-      return { ...prev, categories };
-    });
-  };
-
-  const handleClearCategorySelection = () => {
-    setFilters(prev => ({ ...prev, categories: [] }));
-  };
-
   const handleClearFilters = () => {
     setFilters({
       minAmount: '',

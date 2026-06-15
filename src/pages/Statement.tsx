@@ -35,8 +35,6 @@ import {
   Print as PrintIcon,
   Download as DownloadIcon,
   Visibility as VisibilityIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';

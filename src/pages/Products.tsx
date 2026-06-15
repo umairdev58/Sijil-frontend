@@ -104,16 +104,6 @@ const Products: React.FC = () => {
       const response = await apiService.getProducts(options);
       if (response.success && response.data) {
         const validProducts = response.data.filter((p: any) => p && typeof p._id === 'string');
-        // Debug: Log first product to see category structure
-        if (validProducts.length > 0 && categories.length > 0) {
-          console.log('Sample product category structure:', {
-            product: validProducts[0].name,
-            category: validProducts[0].category,
-            categoryType: typeof validProducts[0].category,
-            categoriesLoaded: categories.length,
-            firstCategory: categories[0]
-          });
-        }
         setProducts(validProducts);
         const paginationTotal = response.pagination?.totalProducts ?? response.pagination?.total ?? validProducts.length;
         setTotalProducts(paginationTotal);

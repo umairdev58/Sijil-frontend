@@ -54,7 +54,7 @@ import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Snackbar } from '@mui/material';
 import apiService from '../services/api';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Sales, Payment } from '../types';
 import BeautifulRefreshButton from '../components/BeautifulRefreshButton';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -99,7 +99,6 @@ const SalesPage: React.FC = () => {
   const [currentInvoiceId, setCurrentInvoiceId] = useState<string | null>(null);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const location = useLocation();
   const [hydratedFromUrl, setHydratedFromUrl] = useState(false);
   const pageRef = useRef(0); // Track current page in ref to avoid closure issues
   const { mode } = useAppTheme();
@@ -731,7 +730,7 @@ const SalesPage: React.FC = () => {
     setPage(0);
     // Call fetchSales with page 0 explicitly to avoid closure issues
     fetchSales(0);
-  }, [searchQuery, debouncedFilters, hydratedFromUrl]);
+  }, [searchQuery, debouncedFilters, hydratedFromUrl, fetchSales]);
 
   // Initial fetch once hydrated (covers cases with no further changes)
   useEffect(() => {
