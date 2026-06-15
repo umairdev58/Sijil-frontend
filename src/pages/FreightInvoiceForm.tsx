@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -9,8 +9,6 @@ import {
   Snackbar,
   Alert,
   LinearProgress,
-  Card,
-  CardContent,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -29,9 +27,10 @@ const FreightInvoiceForm: React.FC = () => {
   const isEditing = !!id;
 
   const [formData, setFormData] = useState({
-    amount_pkr: '',
-    conversion_rate: '',
-    agent: '',
+    invoice_number: '',
+    description: '',
+    container_number: '',
+    amount_aed: '',
     invoice_date: new Date(),
     due_date: new Date(),
   });
@@ -41,13 +40,6 @@ const FreightInvoiceForm: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Auto-calculated AED amount
-  const amountAED = useMemo(() => {
-    const pkr = parseFloat(formData.amount_pkr) || 0;
-    const rate = parseFloat(formData.conversion_rate) || 0;
-    return rate > 0 ? pkr / rate : 0;
-  }, [formData.amount_pkr, formData.conversion_rate]);
-
   const loadInvoice = useCallback(async () => {
     try {
       setLoading(true);
@@ -55,9 +47,10 @@ const FreightInvoiceForm: React.FC = () => {
       if (res.success && res.data) {
         const invoice = res.data;
         setFormData({
-          amount_pkr: invoice.amount_pkr.toString(),
-          conversion_rate: invoice.conversion_rate.toString(),
-          agent: invoice.agent,
+          invoice_number: invoice.invoice_number,
+          description: invoice.description || '',
+          container_number: invoice.container_number || '',
+          amount_aed: invoice.amount_aed.toString(),
           invoice_date: new Date(invoice.invoice_date),
           due_date: new Date(invoice.due_date),
         });
@@ -77,8 +70,8 @@ const FreightInvoiceForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.amount_pkr || !formData.conversion_rate || !formData.agent) {
+
+    if (!formData.invoice_number || !formData.amount_aed) {
       setError('Please fill in all required fields');
       return;
     }
@@ -86,9 +79,10 @@ const FreightInvoiceForm: React.FC = () => {
     try {
       setSaving(true);
       const data = {
-        amount_pkr: parseFloat(formData.amount_pkr),
-        conversion_rate: parseFloat(formData.conversion_rate),
-        agent: formData.agent,
+        invoice_number: formData.invoice_number,
+        description: formData.description,
+        container_number: formData.container_number,
+        amount_aed: parseFloat(formData.amount_aed),
         invoice_date: formData.invoice_date.toISOString(),
         due_date: formData.due_date.toISOString(),
       };
@@ -113,14 +107,6 @@ const FreightInvoiceForm: React.FC = () => {
     fontWeight: 800,
     color: theme.palette.mode === 'dark' ? theme.palette.primary.light : '#1e3a8a',
   }));
-
-  const formatCurrency = (amount: number, currency: 'PKR' | 'AED') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
 
   if (loading) {
     return (
@@ -150,59 +136,40 @@ const FreightInvoiceForm: React.FC = () => {
         <Paper sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
           <form onSubmit={handleSubmit}>
             <Stack spacing={3}>
-              {/* Amount PKR and Conversion Rate */}
-              <Stack direction="row" spacing={2}>
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="Amount (PKR) *"
-                    type="number"
-                    value={formData.amount_pkr}
-                    onChange={(e) => setFormData({ ...formData, amount_pkr: e.target.value })}
-                    inputProps={{ min: 0, step: 0.01 }}
-                    required
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <TextField
-                    fullWidth
-                    label="Conversion Rate (PKR per AED) *"
-                    type="number"
-                    value={formData.conversion_rate}
-                    onChange={(e) => setFormData({ ...formData, conversion_rate: e.target.value })}
-                    inputProps={{ min: 0.000001, step: 0.000001 }}
-                    required
-                    helperText="e.g., 78 PKR = 1 AED"
-                  />
-                </Box>
-              </Stack>
+              <TextField
+                fullWidth
+                label="Invoice Number *"
+                value={formData.invoice_number}
+                onChange={(e) => setFormData({ ...formData, invoice_number: e.target.value })}
+                required
+              />
 
-              {/* Auto-calculated AED Amount */}
-              <Box>
-                <Card sx={{ backgroundColor: 'background.paper' }}>
-                  <CardContent>
-                    <Typography variant="h6" color="primary" gutterBottom>
-                      Calculated Amount (AED)
-                    </Typography>
-                    <Typography variant="h4" fontWeight="bold">
-                      {formatCurrency(amountAED, 'AED')}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Box>
+              <TextField
+                fullWidth
+                label="Shipment / Container Number"
+                value={formData.container_number}
+                onChange={(e) => setFormData({ ...formData, container_number: e.target.value })}
+              />
 
-              {/* Agent */}
-              <Box>
-                <TextField
-                  fullWidth
-                  label="Agent *"
-                  value={formData.agent}
-                  onChange={(e) => setFormData({ ...formData, agent: e.target.value })}
-                  required
-                />
-              </Box>
+              <TextField
+                fullWidth
+                label="Description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                multiline
+                rows={3}
+              />
 
-              {/* Invoice Date and Due Date */}
+              <TextField
+                fullWidth
+                label="Amount (AED) *"
+                type="number"
+                value={formData.amount_aed}
+                onChange={(e) => setFormData({ ...formData, amount_aed: e.target.value })}
+                inputProps={{ min: 0, step: 0.01 }}
+                required
+              />
+
               <Stack direction="row" spacing={2}>
                 <Box sx={{ flex: 1 }}>
                   <DatePicker
@@ -232,7 +199,6 @@ const FreightInvoiceForm: React.FC = () => {
                 </Box>
               </Stack>
 
-              {/* Submit Button */}
               <Box>
                 <Stack direction="row" spacing={2} justifyContent="flex-end">
                   <Button
@@ -260,7 +226,6 @@ const FreightInvoiceForm: React.FC = () => {
           </form>
         </Paper>
 
-        {/* Notifications */}
         <Snackbar open={!!error} autoHideDuration={6000} onClose={() => setError(null)}>
           <Alert onClose={() => setError(null)} severity="error">
             {error}

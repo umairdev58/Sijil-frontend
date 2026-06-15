@@ -355,7 +355,7 @@ const CustomerOutstandingPage: React.FC = () => {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto' }, gap: 2, alignItems: 'center' }}>
           <TextField
             fullWidth
-            placeholder="Search customers, products, amounts..."
+            placeholder="Search by exact customer name..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => { if ((e as any).key === 'Enter') handleSearch(); }}

@@ -31,9 +31,7 @@ import {
   InputLabel,
   Select,
   Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Collapse,
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
@@ -49,15 +47,9 @@ import {
   Warning as WarningIcon,
   Error as ErrorIcon,
   FilterList as FilterIcon,
-  ExpandMore as ExpandMoreIcon,
   Assessment as ReportIcon,
   PictureAsPdf as PdfIcon,
   TableChart as CsvIcon,
-  Refresh as RefreshIcon,
-  TrendingUp as TrendingUpIcon,
-  AccountBalance as AccountBalanceIcon,
-  Receipt as ReceiptIcon,
-  Payment as PaymentIcon,
   Visibility as VisibilityIcon,
   Assessment as AssessmentIcon,
   Clear as ClearIcon,
@@ -66,16 +58,16 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { styled, useTheme } from '@mui/material/styles';
 import apiService from '../services/api';
 import { FreightInvoice, FreightPayment } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
+import BeautifulRefreshButton from '../components/BeautifulRefreshButton';
 import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import { ColumnConfig } from '../components/ColumnToggle';
 import { useColumnToggle } from '../hooks/useColumnToggle';
+import { getPaymentAmountError, getApiErrorMessage, formatAED } from '../utils/paymentValidation';
 
 const FreightInvoices: React.FC = () => {
-  const theme = useTheme();
   const { mode } = useAppTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -91,7 +83,6 @@ const FreightInvoices: React.FC = () => {
 
   // Enhanced filters
   const [statusFilter, setStatusFilter] = useState('');
-  const [agentFilter, setAgentFilter] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [minAmount, setMinAmount] = useState('');
@@ -102,6 +93,7 @@ const FreightInvoices: React.FC = () => {
 
   // Payment dialog state
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<FreightInvoice | null>(null);
   const [paymentData, setPaymentData] = useState({
     amount: '',
@@ -120,15 +112,14 @@ const FreightInvoices: React.FC = () => {
   // Report dialog state
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportFormat, setReportFormat] = useState<'pdf' | 'csv'>('pdf');
-  const [reportGroupBy, setReportGroupBy] = useState<'none' | 'agent' | 'status' | 'month'>('none');
+  const [reportGroupBy, setReportGroupBy] = useState<'none' | 'status' | 'month'>('none');
   const [includePayments, setIncludePayments] = useState(true);
 
   // Column configuration for table
   const defaultColumns: ColumnConfig[] = [
     { id: 'invoiceNumber', label: 'Invoice Number', visible: true, order: 1, required: true },
-    { id: 'agent', label: 'Agent', visible: true, order: 2, required: true },
-    { id: 'customer', label: 'Customer', visible: true, order: 3, required: true },
-    { id: 'containerNo', label: 'Container No', visible: true, order: 4 },
+    { id: 'containerNo', label: 'Container No', visible: true, order: 2, required: true },
+    { id: 'description', label: 'Description', visible: true, order: 3 },
     { id: 'vessel', label: 'Vessel', visible: false, order: 5 },
     { id: 'voyage', label: 'Voyage', visible: false, order: 6 },
     { id: 'port', label: 'Port', visible: false, order: 7 },
@@ -143,7 +134,7 @@ const FreightInvoices: React.FC = () => {
   useColumnToggle({
     defaultColumns,
     storageKey: 'freight-invoices-table-columns',
-    requiredColumns: ['invoiceNumber', 'agent', 'customer', 'amount', 'outstandingAmount', 'status', 'actions'],
+    requiredColumns: ['invoiceNumber', 'containerNo', 'amount', 'outstandingAmount', 'status', 'actions'],
   });
 
   // Auto-search with debouncing
@@ -166,7 +157,6 @@ const FreightInvoices: React.FC = () => {
         rowsPerPage,
         search,
         statusFilter,
-        agentFilter,
         startDate?.toISOString() || '',
         endDate?.toISOString() || '',
         minAmount || '',
@@ -183,7 +173,7 @@ const FreightInvoices: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, search, statusFilter, agentFilter, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
+  }, [page, rowsPerPage, search, statusFilter, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
 
   useEffect(() => {
     load();
@@ -209,8 +199,16 @@ const FreightInvoices: React.FC = () => {
 
   const handleAddPayment = async () => {
     if (!selectedInvoice || !paymentData.amount) return;
-    
+
+    const amount = parseFloat(paymentData.amount);
+    const validationError = getPaymentAmountError(amount, selectedInvoice.outstanding_amount_aed);
+    if (validationError) {
+      setPaymentError(validationError);
+      return;
+    }
+
     try {
+      setPaymentError(null);
       const res = await apiService.addFreightPayment(selectedInvoice._id, {
         amount: parseFloat(paymentData.amount),
         paymentType: paymentData.paymentType,
@@ -223,6 +221,7 @@ const FreightInvoices: React.FC = () => {
       if (res.success) {
         setSuccess('Payment added successfully');
         setPaymentDialogOpen(false);
+        setPaymentError(null);
         setSelectedInvoice(null);
         setPaymentData({
           amount: '',
@@ -235,7 +234,7 @@ const FreightInvoices: React.FC = () => {
         load();
       }
     } catch (e: any) {
-      setError(e?.message || 'Failed to add payment');
+      setPaymentError(getApiErrorMessage(e, 'Failed to add payment'));
     }
   };
 
@@ -245,7 +244,6 @@ const FreightInvoices: React.FC = () => {
       const options = {
         startDate: startDate?.toISOString().split('T')[0] || '',
         endDate: endDate?.toISOString().split('T')[0] || '',
-        agent: agentFilter || '',
         status: statusFilter || '',
         minAmount: minAmount || '',
         maxAmount: maxAmount || '',
@@ -287,17 +285,12 @@ const FreightInvoices: React.FC = () => {
     }
   };
 
-  const Title = styled(Typography)(({ theme }) => ({
-    fontWeight: 800,
-    color: theme.palette.mode === 'dark' ? theme.palette.primary.light : '#1e3a8a',
-  }));
-
   const pageTotals = useMemo(() => {
-    const totalPKR = rows.reduce((sum, r) => sum + (r.amount_pkr || 0), 0);
     const totalAED = rows.reduce((sum, r) => sum + (r.amount_aed || 0), 0);
-    const totalPaidPKR = rows.reduce((sum, r) => sum + (r.paid_amount_pkr || 0), 0);
-    const totalOutstandingPKR = rows.reduce((sum, r) => sum + (r.outstanding_amount_pkr || 0), 0);
-    return { totalPKR, totalAED, totalPaidPKR, totalOutstandingPKR };
+    const totalPaidAED = rows.reduce((sum, r) => sum + (r.paid_amount_aed || 0), 0);
+    const totalOutstandingAED = rows.reduce((sum, r) => sum + (r.outstanding_amount_aed || 0), 0);
+    const collectionRate = totalAED > 0 ? (totalPaidAED / totalAED) * 100 : 0;
+    return { totalAED, totalPaidAED, totalOutstandingAED, collectionRate };
   }, [rows]);
 
   const formatDate = (dateString: string) => {
@@ -315,7 +308,6 @@ const FreightInvoices: React.FC = () => {
   const clearFilters = () => {
     setSearch('');
     setStatusFilter('');
-    setAgentFilter('');
     setStartDate(null);
     setEndDate(null);
     setMinAmount('');
@@ -325,7 +317,7 @@ const FreightInvoices: React.FC = () => {
   };
 
   const hasActiveFilters = () => {
-    return search || statusFilter || agentFilter || startDate || endDate || 
+    return search || statusFilter || startDate || endDate || 
            minAmount || maxAmount || dueDateFrom || dueDateTo;
   };
 
@@ -337,158 +329,99 @@ const FreightInvoices: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Box sx={{ p: 3, backgroundColor: 'background.default', minHeight: '100vh' }}>
-        {/* Header Section */}
-        <Paper sx={{ 
-          p: 3, 
-          mb: 3, 
-          background: theme.palette.mode === 'dark' 
-            ? 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)' 
-            : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', 
-          color: 'white' 
-        }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Title variant="h4" sx={{ color: 'white', mb: 1 }}>
-                Freight Invoices
-              </Title>
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                Manage and track freight invoice payments
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="outlined"
-                startIcon={<ReportIcon />}
-                onClick={() => setReportDialogOpen(true)}
-                sx={{ 
-                  color: 'white', 
-                  borderColor: 'white',
-                  '&:hover': { borderColor: 'white', backgroundColor: 'rgba(255,255,255,0.1)' }
-                }}
-              >
-                Generate Report
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => navigate('/freight-invoices/new')}
-                                 sx={{
-                   backgroundColor: 'background.paper',
-                   color: 'primary.main',
-                   '&:hover': { backgroundColor: 'action.hover' },
-                 }}
-              >
-                New Invoice
-              </Button>
-            </Stack>
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Freight Invoices
+          </Typography>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              startIcon={<ReportIcon />}
+              onClick={() => setReportDialogOpen(true)}
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
+            >
+              Generate Report
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/freight-invoices/new')}
+              sx={{
+                borderRadius: 999,
+                textTransform: 'none',
+                fontWeight: 700,
+                px: 2.5,
+                bgcolor: mode === 'dark' ? '#8b5cf6' : '#1e3a8a',
+                color: '#ffffff',
+                '&:hover': {
+                  bgcolor: mode === 'dark' ? '#7c3aed' : '#1e40af',
+                },
+              }}
+            >
+              New Invoice
+            </Button>
           </Stack>
-        </Paper>
+        </Box>
 
-        {/* Statistics Cards */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3, mb: 3 }}>
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'
-              : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total PKR
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(pageTotals.totalPKR, 'PKR')}
-                  </Typography>
-                </Box>
-                <AccountBalanceIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Total Invoices
+              </Typography>
+              <Typography variant="h4" component="div">
+                {totalCount}
+              </Typography>
+              <LinearProgress variant="determinate" value={totalCount > 0 ? 100 : 0} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
-          
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #34d399 0%, #10b981 100%)'
-              : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total AED
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(pageTotals.totalAED, 'AED')}
-                  </Typography>
-                </Box>
-                <TrendingUpIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Total Amount
+              </Typography>
+              <Typography variant="h4" component="div">
+                {formatCurrency(pageTotals.totalAED, 'AED')}
+              </Typography>
+              <LinearProgress variant="determinate" value={85} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
-          
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-              : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                                     <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                     Paid PKR
-                   </Typography>
-                   <Typography variant="h5" fontWeight="bold">
-                     {formatCurrency(pageTotals.totalPaidPKR, 'PKR')}
-                   </Typography>
-                </Box>
-                <PaymentIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Paid Amount
+              </Typography>
+              <Typography variant="h4" component="div" color="success.main">
+                {formatCurrency(pageTotals.totalPaidAED, 'AED')}
+              </Typography>
+              <LinearProgress variant="determinate" value={75} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
-          
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)'
-              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Outstanding PKR
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(pageTotals.totalOutstandingPKR, 'PKR')}
-                  </Typography>
-                </Box>
-                <ReceiptIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Outstanding Amount
+              </Typography>
+              <Typography variant="h4" component="div" color="error">
+                {formatCurrency(pageTotals.totalOutstandingAED, 'AED')}
+              </Typography>
+              <LinearProgress variant="determinate" value={pageTotals.collectionRate} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
         </Box>
 
-        {/* Search and Filters */}
-        <Paper sx={{ 
-          p: 3, mb: 3,
+        <Paper sx={{
+          p: 2,
+          mb: 3,
           bgcolor: mode === 'dark' ? 'rgba(30,41,59,0.8)' : 'background.paper',
           border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : '1px solid rgba(2,6,23,0.06)',
           borderRadius: 3,
         }}>
-          <Stack spacing={3}>
-            {/* Basic Search */}
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto auto auto' }, gap: 2, alignItems: 'center' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto' }, gap: 2, alignItems: 'center' }}>
               <TextField
                 fullWidth
-                placeholder="Search by invoice number, agent, amount..."
+                placeholder="Search by invoice number, container, description..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => { if ((e as any).key === 'Enter') setSearch(searchInput.trim()); }}
@@ -519,41 +452,30 @@ const FreightInvoices: React.FC = () => {
                   )
                 }}
               />
+            <Stack direction="row" spacing={2}>
               <Button
                 variant="outlined"
                 startIcon={<FilterIcon />}
                 onClick={() => setShowFilters(!showFilters)}
-                color={hasActiveFilters() ? 'primary' : 'inherit'}
-                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
               >
-                Filters {hasActiveFilters() && `(${Object.values({search, statusFilter, agentFilter, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo}).filter(Boolean).length})`}
+                Filters
               </Button>
-              <Button 
-                variant="outlined" 
-                onClick={clearFilters} 
-                disabled={!hasActiveFilters()}
-                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
-              >
-                Clear
-              </Button>
-              <Button 
-                variant="outlined" 
-                startIcon={<RefreshIcon />} 
+              <BeautifulRefreshButton
                 onClick={load}
-                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
-              >
-                Refresh
-              </Button>
-            </Box>
+                variant="outlined"
+                buttonText="Refresh"
+              />
+            </Stack>
+          </Box>
 
-            {/* Advanced Filters */}
-            {showFilters && (
-              <Accordion defaultExpanded>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="h6">Advanced Filters</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Stack spacing={3}>
+          <Collapse in={showFilters}>
+            <Box sx={{ mt: 2 }}>
+              <Paper sx={{ p: 2, bgcolor: mode === 'dark' ? 'rgba(15,23,42,0.6)' : 'rgba(2,6,23,0.02)', border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : '1px solid rgba(2,6,23,0.06)', borderRadius: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Advanced Filters
+                </Typography>
+                <Stack spacing={3}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
                       <FormControl fullWidth>
                         <InputLabel>Status</InputLabel>
@@ -571,14 +493,7 @@ const FreightInvoices: React.FC = () => {
                       </FormControl>
                       
                       <TextField
-                        placeholder="Agent"
-                        value={agentFilter}
-                        onChange={(e) => setAgentFilter(e.target.value)}
-                        fullWidth
-                      />
-                      
-                      <TextField
-                        placeholder="Min Amount"
+                        placeholder="Min Amount (AED)"
                         value={minAmount}
                         onChange={(e) => setMinAmount(e.target.value)}
                         type="number"
@@ -633,15 +548,36 @@ const FreightInvoices: React.FC = () => {
                         }}
                       />
                     </Box>
+                  <Stack direction="row" spacing={2} justifyContent="flex-end">
+                    <Button
+                      variant="outlined"
+                      onClick={clearFilters}
+                      disabled={!hasActiveFilters()}
+                      sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
+                    >
+                      Clear All Filters
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={() => setShowFilters(false)}
+                      sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
+                    >
+                      Apply Filters
+                    </Button>
                   </Stack>
-                </AccordionDetails>
-              </Accordion>
-            )}
-          </Stack>
+                </Stack>
+              </Paper>
+            </Box>
+          </Collapse>
         </Paper>
 
-        {/* Invoices Table */}
-        <Paper sx={{ overflow: 'hidden' }}>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Showing {rows.length === 0 ? 0 : page * rowsPerPage + 1} - {Math.min((page + 1) * rowsPerPage, totalCount)} of {totalCount} invoices
+          </Typography>
+        </Box>
+
+        <Paper>
           {loading && (
             <Box sx={{ position: 'relative', mb: 2 }}>
               <LinearProgress />
@@ -661,11 +597,11 @@ const FreightInvoices: React.FC = () => {
               <TableHead>
                 <TableRow sx={{ backgroundColor: 'background.paper' }}>
                   <TableCell sx={{ fontWeight: 'bold' }}>Invoice #</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Agent</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Amount (PKR)</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Container</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>Amount (AED)</TableCell>
-                                     <TableCell align="right" sx={{ fontWeight: 'bold' }}>Paid (PKR)</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Outstanding (PKR)</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Paid (AED)</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Outstanding (AED)</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Invoice Date</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
@@ -681,23 +617,21 @@ const FreightInvoices: React.FC = () => {
                         {row.invoice_number}
                       </Typography>
                     </TableCell>
-                    <TableCell>{row.agent}</TableCell>
+                    <TableCell>{row.container_number || '-'}</TableCell>
+                    <TableCell>{row.description || '-'}</TableCell>
                     <TableCell align="right">
                       <Typography variant="body2" fontWeight="bold">
-                        {formatCurrency(row.amount_pkr, 'PKR')}
+                        {formatCurrency(row.amount_aed, 'AED')}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
-                      {formatCurrency(row.amount_aed, 'AED')}
-                    </TableCell>
-                                         <TableCell align="right">
                        <Typography variant="body2" color="success.main" fontWeight="bold">
-                         {formatCurrency(row.paid_amount_pkr, 'PKR')}
+                         {formatCurrency(row.paid_amount_aed, 'AED')}
                        </Typography>
                      </TableCell>
                     <TableCell align="right">
                       <Typography variant="body2" color="error.main" fontWeight="bold">
-                        {formatCurrency(row.outstanding_amount_pkr, 'PKR')}
+                        {formatCurrency(row.outstanding_amount_aed, 'AED')}
                       </Typography>
                     </TableCell>
                     <TableCell>{formatDate(row.invoice_date)}</TableCell>
@@ -716,13 +650,14 @@ const FreightInvoices: React.FC = () => {
                     </TableCell>
                     <TableCell align="center">
                       <Stack direction="row" spacing={1} justifyContent="center">
-                        {row.outstanding_amount_pkr > 0 && (
+                        {row.outstanding_amount_aed > 0 && (
                           <Tooltip title="Add Payment">
                             <IconButton
                               size="small"
                               color="success"
                               onClick={() => {
                                 setSelectedInvoice(row);
+                                setPaymentError(null);
                                 setPaymentDialogOpen(true);
                               }}
                             >
@@ -780,35 +715,42 @@ const FreightInvoices: React.FC = () => {
         </Paper>
 
         {/* Add Payment Dialog */}
-        <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)} maxWidth="sm" fullWidth>
-          <DialogTitle sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)' 
-              : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', 
-            color: 'white' 
-          }}>
-            Add Payment
-          </DialogTitle>
+        <Dialog open={paymentDialogOpen} onClose={() => { setPaymentDialogOpen(false); setPaymentError(null); }} maxWidth="sm" fullWidth>
+          <DialogTitle>Add Payment</DialogTitle>
           <DialogContent sx={{ pt: 3 }}>
             <Stack spacing={3}>
+              {paymentError && (
+                <Alert severity="error" onClose={() => setPaymentError(null)}>
+                  {paymentError}
+                </Alert>
+              )}
               <Box sx={{ p: 2, backgroundColor: 'background.paper', borderRadius: 1 }}>
                 <Typography variant="body2" color="textSecondary">
                   Invoice: <strong>{selectedInvoice?.invoice_number}</strong>
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  Agent: <strong>{selectedInvoice?.agent}</strong>
+                  Container: <strong>{selectedInvoice?.container_number || 'N/A'}</strong>
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  Outstanding Amount: <strong>{selectedInvoice ? formatCurrency(selectedInvoice.outstanding_amount_pkr, 'PKR') : ''}</strong>
+                  Outstanding Amount: <strong>{selectedInvoice ? formatCurrency(selectedInvoice.outstanding_amount_aed, 'AED') : ''}</strong>
                 </Typography>
               </Box>
 
               <TextField
-                label="Payment Amount (PKR) *"
+                label="Payment Amount (AED) *"
                 type="number"
                 value={paymentData.amount}
-                onChange={(e) => setPaymentData({ ...paymentData, amount: e.target.value })}
-                inputProps={{ min: 0.01, step: 0.01 }}
+                onChange={(e) => {
+                  setPaymentData({ ...paymentData, amount: e.target.value });
+                  setPaymentError(null);
+                }}
+                inputProps={{ min: 0.01, step: 0.01, max: selectedInvoice?.outstanding_amount_aed }}
+                error={!!paymentData.amount && parseFloat(paymentData.amount) > (selectedInvoice?.outstanding_amount_aed || 0)}
+                helperText={
+                  selectedInvoice
+                    ? `Maximum payable amount: ${formatAED(selectedInvoice.outstanding_amount_aed)}`
+                    : undefined
+                }
                 required
                 fullWidth
               />
@@ -872,15 +814,10 @@ const FreightInvoices: React.FC = () => {
           </DialogContent>
           <DialogActions sx={{ p: 3 }}>
             <Button onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
-            <Button 
-              onClick={handleAddPayment} 
-              variant="contained" 
+            <Button
+              onClick={handleAddPayment}
+              variant="contained"
               disabled={!paymentData.amount}
-              sx={{ 
-                background: theme.palette.mode === 'dark' 
-                  ? 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)' 
-                  : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)' 
-              }}
             >
               Add Payment
             </Button>
@@ -889,14 +826,7 @@ const FreightInvoices: React.FC = () => {
 
         {/* Payment History Dialog */}
         <Dialog open={historyDialogOpen} onClose={() => setHistoryDialogOpen(false)} maxWidth="md" fullWidth>
-          <DialogTitle sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)' 
-              : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', 
-            color: 'white' 
-          }}>
-            Payment History - {selectedInvoice?.invoice_number}
-          </DialogTitle>
+          <DialogTitle>Payment History - {selectedInvoice?.invoice_number}</DialogTitle>
           <DialogContent sx={{ pt: 3 }}>
             {historyLoading ? (
               <LinearProgress />
@@ -952,27 +882,13 @@ const FreightInvoices: React.FC = () => {
 
         {/* Report Generation Dialog */}
         <Dialog open={reportDialogOpen} onClose={() => setReportDialogOpen(false)} maxWidth="md" fullWidth>
-          <DialogTitle sx={{ 
-            background: 'primary.main', 
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1
-          }}>
-                         <AssessmentIcon sx={{ fontSize: 24 }} />
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AssessmentIcon sx={{ fontSize: 24 }} />
             Generate Freight Report
           </DialogTitle>
           <DialogContent sx={{ pt: 3 }}>
             <Stack spacing={4}>
-              {/* Info Card */}
-              <Card sx={{ 
-                background: theme => theme.palette.mode === 'dark' 
-                  ? 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)'
-                  : 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                border: '1px solid',
-                borderColor: 'primary.main',
-                borderRadius: 2
-              }}>
+              <Card variant="outlined">
                 <CardContent sx={{ p: 2 }}>
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Box sx={{ 
@@ -1070,18 +986,12 @@ const FreightInvoices: React.FC = () => {
                     <Select
                       value={reportGroupBy}
                       label="Group By"
-                      onChange={(e) => setReportGroupBy(e.target.value as 'none' | 'agent' | 'status' | 'month')}
+                      onChange={(e) => setReportGroupBy(e.target.value as 'none' | 'status' | 'month')}
                     >
                       <MenuItem value="none">
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'text.secondary' }} />
                           <span>No Grouping</span>
-                        </Stack>
-                      </MenuItem>
-                      <MenuItem value="agent">
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: 'primary.main' }} />
-                          <span>By Agent</span>
                         </Stack>
                       </MenuItem>
                       <MenuItem value="status">
@@ -1146,14 +1056,7 @@ const FreightInvoices: React.FC = () => {
               </Box>
 
               {/* Preview Summary */}
-              <Card sx={{ 
-                background: theme.palette.mode === 'dark' 
-                  ? 'linear-gradient(135deg, #451a03 0%, #78350f 100%)'
-                  : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                border: '1px solid',
-                borderColor: 'warning.main',
-                borderRadius: 2
-              }}>
+              <Card variant="outlined" sx={{ borderColor: 'warning.main' }}>
                 <CardContent sx={{ p: 2 }}>
                   <Stack direction="row" spacing={2} alignItems="center">
                     <Box sx={{ 
@@ -1198,29 +1101,11 @@ const FreightInvoices: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button 
-              onClick={handleGenerateReport} 
+            <Button
+              onClick={handleGenerateReport}
               variant="contained"
               startIcon={reportFormat === 'pdf' ? <PdfIcon /> : <CsvIcon />}
-              sx={{ 
-                borderRadius: 999,
-                textTransform: 'none',
-                fontWeight: 600,
-                background: theme.palette.mode === 'dark' 
-                  ? 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)'
-                  : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
-                px: 4,
-                py: 1.5,
-                fontSize: '1rem',
-                '&:hover': {
-                  background: theme.palette.mode === 'dark' 
-                    ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)'
-                    : 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 12px rgba(30, 58, 138, 0.3)'
-                },
-                transition: 'all 0.2s ease'
-              }}
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
             >
               Generate {reportFormat.toUpperCase()} Report
             </Button>

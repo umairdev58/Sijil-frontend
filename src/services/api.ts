@@ -275,6 +275,7 @@ class ApiService {
     customer?: string;
     supplier?: string;
     containerNo?: string;
+    product?: string;
     status?: string;
     statuses?: string;
     format?: 'json' | 'csv' | 'pdf';
@@ -304,6 +305,7 @@ class ApiService {
     customer?: string;
     supplier?: string;
     containerNo?: string;
+    product?: string;
     status?: string;
     statuses?: string;
     format?: 'csv' | 'pdf';
@@ -686,11 +688,19 @@ class ApiService {
     return response.data;
   }
 
-  async getUniqueProducts(): Promise<{ 
+  async getUniqueProducts(customer?: string, scope: 'all' | 'outstanding' = 'outstanding'): Promise<{ 
     success: boolean; 
     data: string[];
   }> {
-    const response: AxiosResponse = await this.api.get('/sales/products');
+    const params = new URLSearchParams();
+    if (customer) {
+      params.append('customer', customer);
+    }
+    if (scope === 'all') {
+      params.append('scope', 'all');
+    }
+    const query = params.toString();
+    const response: AxiosResponse = await this.api.get(`/sales/products${query ? `?${query}` : ''}`);
     return response.data;
   }
 
@@ -822,7 +832,6 @@ class ApiService {
     limit = 10, 
     search = '', 
     status = '',
-    agent = '',
     startDate = '',
     endDate = '',
     minAmount = '',
@@ -831,7 +840,7 @@ class ApiService {
     dueDateTo = ''
   ): Promise<{ success: boolean; data: FreightInvoice[]; pagination: any }> {
     const response: AxiosResponse = await this.api.get('/freight-invoices', {
-      params: { page, limit, search, status, agent, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo }
+      params: { page, limit, search, status, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo }
     });
     return response.data;
   }
@@ -1164,7 +1173,6 @@ class ApiService {
     limit = 10, 
     search = '', 
     status = '',
-    agent = '',
     startDate = '',
     endDate = '',
     minAmount = '',
@@ -1173,7 +1181,7 @@ class ApiService {
     dueDateTo = ''
   ): Promise<{ success: boolean; data: DubaiTransportInvoice[]; pagination: any }> {
     const response: AxiosResponse = await this.api.get('/dubai-transport-invoices', {
-      params: { page, limit, search, status, agent, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo }
+      params: { page, limit, search, status, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo }
     });
     return response.data;
   }

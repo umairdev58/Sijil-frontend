@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   Box,
@@ -27,6 +27,7 @@ import {
   Tabs,
   Tab,
   Collapse,
+  Autocomplete,
 } from '@mui/material';
 import {
   Assessment as ReportIcon,
@@ -70,6 +71,7 @@ const SalesReportPage: React.FC = () => {
   const [expandedSaleIds, setExpandedSaleIds] = useState<string[]>([]);
   const [salesPage, setSalesPage] = useState(0);
   const [salesRowsPerPage, setSalesRowsPerPage] = useState(10);
+  const [productOptions, setProductOptions] = useState<string[]>([]);
 
   // Report options state
   const [reportOptions, setReportOptions] = useState({
@@ -78,6 +80,7 @@ const SalesReportPage: React.FC = () => {
     customer: '',
     supplier: '',
     containerNo: '',
+    product: '',
     status: '',
     statuses: '',
     groupBy: 'none' as 'none' | 'customer' | 'supplier' | 'status' | 'month' | 'week' | 'container',
@@ -86,6 +89,24 @@ const SalesReportPage: React.FC = () => {
   });
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await apiService.getUniqueProducts(
+          reportOptions.customer || undefined,
+          'all'
+        );
+        if (response.success) {
+          setProductOptions(response.data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      }
+    };
+
+    fetchProducts();
+  }, [reportOptions.customer]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -141,6 +162,7 @@ const SalesReportPage: React.FC = () => {
       customer: '',
       supplier: '',
       containerNo: '',
+      product: '',
       status: '',
       statuses: '',
       groupBy: 'none',
@@ -355,9 +377,33 @@ const SalesReportPage: React.FC = () => {
               <TextField
                 label="Customer"
                 value={reportOptions.customer}
-                onChange={(e) => setReportOptions(prev => ({ ...prev, customer: e.target.value }))}
+                onChange={(e) => setReportOptions(prev => ({
+                  ...prev,
+                  customer: e.target.value,
+                  product: prev.customer !== e.target.value ? '' : prev.product,
+                }))}
                 fullWidth
                 size="small"
+              />
+              <Autocomplete
+                freeSolo
+                options={productOptions}
+                value={reportOptions.product}
+                onChange={(_, value) => setReportOptions(prev => ({ ...prev, product: value || '' }))}
+                onInputChange={(_, value) => setReportOptions(prev => ({ ...prev, product: value }))}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Product"
+                    size="small"
+                    placeholder={reportOptions.customer ? 'Select or type a product' : 'All products'}
+                    helperText={
+                      reportOptions.customer && productOptions.length > 0
+                        ? `${productOptions.length} product(s) sold to this customer`
+                        : undefined
+                    }
+                  />
+                )}
               />
               <TextField
                 label="Supplier"

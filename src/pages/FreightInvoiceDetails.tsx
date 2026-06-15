@@ -38,6 +38,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format } from 'date-fns';
 import apiService from '../services/api';
 import { FreightInvoice, FreightPayment } from '../types';
+import { getPaymentAmountError, getApiErrorMessage, formatAED } from '../utils/paymentValidation';
 import { styled } from '@mui/material/styles';
 
 const StatusChip = styled(Chip)(({ theme }) => ({
@@ -93,6 +94,7 @@ const FreightInvoiceDetails: React.FC = () => {
 
   // Payment dialog state
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentDate, setPaymentDate] = useState<Date>(new Date());
   const [paymentNote, setPaymentNote] = useState('');
@@ -133,16 +135,21 @@ const FreightInvoiceDetails: React.FC = () => {
   }, [id, fetchInvoice, fetchPayments]);
 
   const handleAddPayment = async () => {
-    if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
-      setError('Please enter a valid payment amount');
+    if (!invoice) return;
+
+    const amount = parseFloat(paymentAmount);
+    const validationError = getPaymentAmountError(amount, invoice.outstanding_amount_aed);
+    if (validationError) {
+      setPaymentError(validationError);
       return;
     }
 
     try {
+      setPaymentError(null);
       const response = await apiService.addFreightPayment(id!, {
-        amount: parseFloat(paymentAmount),
+        amount,
         paymentDate: paymentDate.toISOString(),
-        note: paymentNote,
+        notes: paymentNote,
         paymentType
       });
 
@@ -152,13 +159,14 @@ const FreightInvoiceDetails: React.FC = () => {
         setPaymentAmount('');
         setPaymentNote('');
         setPaymentType('partial');
+        setPaymentError(null);
         fetchInvoice();
         fetchPayments();
       } else {
-        setError(response.message || 'Failed to add payment');
+        setPaymentError(response.message || 'Failed to add payment');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to add payment');
+      setPaymentError(getApiErrorMessage(err, 'Failed to add payment'));
     }
   };
 
@@ -166,13 +174,6 @@ const FreightInvoiceDetails: React.FC = () => {
     return new Intl.NumberFormat('en-AE', {
       style: 'currency',
       currency: 'AED'
-    }).format(amount);
-  };
-
-  const formatCurrencyPKR = (amount: number) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR'
     }).format(amount);
   };
 
@@ -239,7 +240,10 @@ const FreightInvoiceDetails: React.FC = () => {
             <Button
               variant="outlined"
               startIcon={<PaymentIcon />}
-              onClick={() => setPaymentDialogOpen(true)}
+              onClick={() => {
+                setPaymentError(null);
+                setPaymentDialogOpen(true);
+              }}
               disabled={invoice.status === 'paid'}
             >
               Add Payment
@@ -309,10 +313,18 @@ const FreightInvoiceDetails: React.FC = () => {
                   </Box>
                   <Box>
                     <Typography variant="subtitle2" color="textSecondary">
-                      Agent
+                      Container Number
                     </Typography>
                     <Typography variant="body1">
-                      {invoice.agent}
+                      {invoice.container_number || 'N/A'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ gridColumn: { sm: '1 / -1' } }}>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Description
+                    </Typography>
+                    <Typography variant="body1">
+                      {invoice.description || 'N/A'}
                     </Typography>
                   </Box>
                 </Box>
@@ -334,14 +346,6 @@ const FreightInvoiceDetails: React.FC = () => {
                     </Typography>
                     <Typography variant="h5" color="primary" fontWeight="bold">
                       {formatCurrency(invoice.amount_aed)}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      Amount (PKR)
-                    </Typography>
-                    <Typography variant="h5" color="primary" fontWeight="bold">
-                      {formatCurrencyPKR(invoice.amount_pkr)}
                     </Typography>
                   </Box>
                   <Box>
@@ -412,7 +416,7 @@ const FreightInvoiceDetails: React.FC = () => {
         </Box>
 
         {/* Payment Dialog */}
-        <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)} maxWidth="sm" fullWidth>
+        <Dialog open={paymentDialogOpen} onClose={() => { setPaymentDialogOpen(false); setPaymentError(null); }} maxWidth="sm" fullWidth>
           <DialogTitle>
             <Stack direction="row" alignItems="center" spacing={1}>
               <PaymentIcon color="primary" />
@@ -421,12 +425,34 @@ const FreightInvoiceDetails: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
+              {paymentError && (
+                <Alert severity="error" onClose={() => setPaymentError(null)}>
+                  {paymentError}
+                </Alert>
+              )}
+              {invoice && (
+                <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    Outstanding: <strong>{formatAED(invoice.outstanding_amount_aed)}</strong>
+                  </Typography>
+                </Box>
+              )}
               <TextField
                 label="Amount"
                 type="number"
                 value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
+                onChange={(e) => {
+                  setPaymentAmount(e.target.value);
+                  setPaymentError(null);
+                }}
                 required
+                inputProps={{ min: 0.01, step: 0.01, max: invoice?.outstanding_amount_aed }}
+                error={!!paymentAmount && parseFloat(paymentAmount) > (invoice?.outstanding_amount_aed || 0)}
+                helperText={
+                  invoice
+                    ? `Maximum payable amount: ${formatAED(invoice.outstanding_amount_aed)}`
+                    : undefined
+                }
                 InputProps={{
                   startAdornment: <InputAdornment position="start">AED</InputAdornment>,
                 }}
@@ -462,7 +488,7 @@ const FreightInvoiceDetails: React.FC = () => {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setPaymentDialogOpen(false)}>
+            <Button onClick={() => { setPaymentDialogOpen(false); setPaymentError(null); }}>
               Cancel
             </Button>
             <Button

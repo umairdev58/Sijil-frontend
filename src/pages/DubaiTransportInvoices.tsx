@@ -20,7 +20,6 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  CircularProgress,
   Card,
   CardContent,
   FormControl,
@@ -28,11 +27,10 @@ import {
   Select,
   MenuItem,
   Tooltip,
-  Pagination,
-  Accordion,
-  AccordionDetails,
-  ToggleButtonGroup,
+  TablePagination,
+  Collapse,
   ToggleButton,
+  ToggleButtonGroup,
   InputAdornment,
   Snackbar,
   LinearProgress,
@@ -50,36 +48,37 @@ import {
   Assessment as AssessmentIcon,
   Print as PrintIcon,
   Money as MoneyIcon,
-  TrendingUp as TrendingUpIcon,
-  AccountBalance as AccountBalanceIcon,
-  Receipt as ReceiptIcon,
   Payment as PaymentIcon,
-  Refresh as RefreshIcon,
   PictureAsPdf as PdfIcon,
   TableChart as CsvIcon,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO } from 'date-fns';
-import { styled, useTheme } from '@mui/material/styles';
 import apiService from '../services/api';
 import { DubaiTransportInvoice } from '../types';
+import BeautifulRefreshButton from '../components/BeautifulRefreshButton';
+import { useTheme as useAppTheme } from '../contexts/ThemeContext';
+import { getPaymentAmountError, getApiErrorMessage, formatAED } from '../utils/paymentValidation';
 
 const DubaiTransportInvoices: React.FC = () => {
-  const theme = useTheme();
+  const { mode } = useAppTheme();
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<DubaiTransportInvoice[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
+  const [pagination, setPagination] = useState({ total: 0 });
   const [, setStats] = useState<any>(null);
 
   // Filter states
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [status, setStatus] = useState('');
-  const [agent, setAgent] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [minAmount, setMinAmount] = useState('');
@@ -90,6 +89,7 @@ const DubaiTransportInvoices: React.FC = () => {
 
   // Payment dialog state
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<DubaiTransportInvoice | null>(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentType, setPaymentType] = useState<'partial' | 'full'>('partial');
@@ -102,24 +102,32 @@ const DubaiTransportInvoices: React.FC = () => {
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportStartDate, setReportStartDate] = useState<Date | null>(null);
   const [reportEndDate, setReportEndDate] = useState<Date | null>(null);
-  const [reportAgent, setReportAgent] = useState('');
   const [reportStatus, setReportStatus] = useState('');
   const [reportMinAmount, setReportMinAmount] = useState('');
   const [reportMaxAmount, setReportMaxAmount] = useState('');
   const [reportDueDateFrom, setReportDueDateFrom] = useState<Date | null>(null);
   const [reportDueDateTo, setReportDueDateTo] = useState<Date | null>(null);
-  const [reportGroupBy, setReportGroupBy] = useState<'none' | 'agent' | 'status' | 'month'>('none');
+  const [reportGroupBy, setReportGroupBy] = useState<'none' | 'status' | 'month'>('none');
   const [includePayments, setIncludePayments] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchInput !== search) {
+        setSearch(searchInput.trim());
+        setPage(0);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
       const res = await apiService.getDubaiTransportInvoices(
-        pagination.page,
-        pagination.limit,
+        page + 1,
+        rowsPerPage,
         search,
         status,
-        agent,
         startDate ? format(startDate, 'yyyy-MM-dd') : '',
         endDate ? format(endDate, 'yyyy-MM-dd') : '',
         minAmount,
@@ -129,14 +137,14 @@ const DubaiTransportInvoices: React.FC = () => {
       );
       if (res.success) {
         setInvoices(res.data);
-        setPagination(prev => ({ ...prev, ...res.pagination }));
+        setPagination({ total: res.pagination?.total || 0 });
       }
     } catch (e: any) {
       setError(e.response?.data?.message || 'Failed to load invoices');
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, search, status, agent, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
+  }, [page, rowsPerPage, search, status, startDate, endDate, minAmount, maxAmount, dueDateFrom, dueDateTo]);
 
   const loadStats = useCallback(async () => {
     try {
@@ -154,31 +162,33 @@ const DubaiTransportInvoices: React.FC = () => {
     loadStats();
   }, [load, loadStats]);
 
-  const handleSearch = () => {
-    setPagination(prev => ({ ...prev, page: 1 }));
-    load();
-  };
-
   const handleClearFilters = () => {
+    setSearchInput('');
     setSearch('');
     setStatus('');
-    setAgent('');
     setStartDate(null);
     setEndDate(null);
     setMinAmount('');
     setMaxAmount('');
     setDueDateFrom(null);
     setDueDateTo(null);
-    setPagination(prev => ({ ...prev, page: 1 }));
-    load();
+    setPage(0);
   };
 
   const handlePaymentSubmit = async () => {
     if (!selectedInvoice || !paymentAmount) return;
 
+    const amount = parseFloat(paymentAmount);
+    const validationError = getPaymentAmountError(amount, selectedInvoice.outstanding_amount_aed);
+    if (validationError) {
+      setPaymentError(validationError);
+      return;
+    }
+
     try {
+      setPaymentError(null);
       const paymentData = {
-        amount_aed: parseFloat(paymentAmount),
+        amount_aed: amount,
         paymentType,
         paymentMethod,
         reference: paymentReference,
@@ -190,6 +200,7 @@ const DubaiTransportInvoices: React.FC = () => {
       if (res.success) {
         setSuccess('Payment added successfully');
         setPaymentDialogOpen(false);
+        setPaymentError(null);
         setSelectedInvoice(null);
         setPaymentAmount('');
         setPaymentType('partial');
@@ -203,7 +214,7 @@ const DubaiTransportInvoices: React.FC = () => {
         setError(res.message || 'Failed to add payment');
       }
     } catch (e: any) {
-      setError(e.response?.data?.message || 'Failed to add payment');
+      setPaymentError(getApiErrorMessage(e, 'Failed to add payment'));
     }
   };
 
@@ -229,7 +240,6 @@ const DubaiTransportInvoices: React.FC = () => {
       const options = {
         startDate: reportStartDate ? format(reportStartDate, 'yyyy-MM-dd') : undefined,
         endDate: reportEndDate ? format(reportEndDate, 'yyyy-MM-dd') : undefined,
-        agent: reportAgent || undefined,
         status: reportStatus || undefined,
         minAmount: reportMinAmount || undefined,
         maxAmount: reportMaxAmount || undefined,
@@ -281,305 +291,217 @@ const DubaiTransportInvoices: React.FC = () => {
     }).format(amount);
   };
 
-  const formatCurrencyPKR = (amount: number) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR'
-    }).format(amount);
-  };
-
   const pageTotals = useMemo(() => {
     return invoices.reduce((acc, invoice) => ({
-      totalAmountPKR: acc.totalAmountPKR + invoice.amount_pkr,
       totalAmountAED: acc.totalAmountAED + invoice.amount_aed,
-      totalPaidPKR: acc.totalPaidPKR + invoice.paid_amount_pkr,
       totalPaidAED: acc.totalPaidAED + invoice.paid_amount_aed,
-      totalOutstandingPKR: acc.totalOutstandingPKR + invoice.outstanding_amount_pkr,
       totalOutstandingAED: acc.totalOutstandingAED + invoice.outstanding_amount_aed
     }), { 
-      totalAmountPKR: 0, 
       totalAmountAED: 0, 
-      totalPaidPKR: 0, 
       totalPaidAED: 0, 
-      totalOutstandingPKR: 0, 
       totalOutstandingAED: 0 
     });
   }, [invoices]);
 
-  const Title = styled(Typography)(({ theme }) => ({
-    fontWeight: 800,
-    color: theme.palette.mode === 'dark' ? theme.palette.primary.light : '#1e3a8a',
-  }));
+  const collectionRate = pageTotals.totalAmountAED > 0
+    ? (pageTotals.totalPaidAED / pageTotals.totalAmountAED) * 100
+    : 0;
 
   const hasActiveFilters = () => {
-    return search || status || agent || startDate || endDate || 
+    return search || status || startDate || endDate || 
            minAmount || maxAmount || dueDateFrom || dueDateTo;
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <Box sx={{ p: 3, backgroundColor: theme.palette.background.default, minHeight: '100vh' }}>
-        {/* Header Section */}
-        <Paper sx={{ 
-          p: 3, 
-          mb: 3, 
-          background: theme.palette.mode === 'dark' 
-            ? 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)' 
-            : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', 
-          color: 'white' 
-        }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Title variant="h4" sx={{ color: 'white', mb: 1 }}>
-                Dubai Transport Invoices
-              </Title>
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                Manage and track Dubai transport invoice payments
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="outlined"
-                startIcon={<AssessmentIcon />}
-                onClick={() => setReportDialogOpen(true)}
-                sx={{ 
-                  color: 'white', 
-                  borderColor: 'white',
-                  '&:hover': { borderColor: 'white', backgroundColor: 'rgba(255,255,255,0.1)' }
-                }}
-              >
-                Generate Report
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => navigate('/dubai-transport-invoices/new')}
-                                 sx={{
-                   backgroundColor: theme.palette.background.paper,
-                   color: theme.palette.primary.main,
-                   '&:hover': { backgroundColor: theme.palette.action.hover },
-                 }}
-              >
-                New Invoice
-              </Button>
-            </Stack>
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Dubai Transport Invoices
+          </Typography>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              startIcon={<AssessmentIcon />}
+              onClick={() => setReportDialogOpen(true)}
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
+            >
+              Generate Report
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/dubai-transport-invoices/new')}
+              sx={{
+                borderRadius: 999,
+                textTransform: 'none',
+                fontWeight: 700,
+                px: 2.5,
+                bgcolor: mode === 'dark' ? '#8b5cf6' : '#1e3a8a',
+                color: '#ffffff',
+                '&:hover': {
+                  bgcolor: mode === 'dark' ? '#7c3aed' : '#1e40af',
+                },
+              }}
+            >
+              New Invoice
+            </Button>
           </Stack>
-        </Paper>
+        </Box>
 
-        {/* Statistics Cards */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3, mb: 3 }}>
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'
-              : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total PKR
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrencyPKR(pageTotals.totalAmountPKR)}
-                  </Typography>
-                </Box>
-                <AccountBalanceIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Total Invoices
+              </Typography>
+              <Typography variant="h4" component="div">
+                {pagination.total}
+              </Typography>
+              <LinearProgress variant="determinate" value={pagination.total > 0 ? 100 : 0} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
-          
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #34d399 0%, #10b981 100%)'
-              : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total AED
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(pageTotals.totalAmountAED)}
-                  </Typography>
-                </Box>
-                <TrendingUpIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Total Amount
+              </Typography>
+              <Typography variant="h4" component="div">
+                {formatCurrency(pageTotals.totalAmountAED)}
+              </Typography>
+              <LinearProgress variant="determinate" value={85} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
-          
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-              : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Paid Amount
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(pageTotals.totalPaidAED)}
-                  </Typography>
-                </Box>
-                <PaymentIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Paid Amount
+              </Typography>
+              <Typography variant="h4" component="div" color="success.main">
+                {formatCurrency(pageTotals.totalPaidAED)}
+              </Typography>
+              <LinearProgress variant="determinate" value={75} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
-          
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)'
-              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Outstanding
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(pageTotals.totalOutstandingAED)}
-                  </Typography>
-                </Box>
-                <ReceiptIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Outstanding Amount
+              </Typography>
+              <Typography variant="h4" component="div" color="error">
+                {formatCurrency(pageTotals.totalOutstandingAED)}
+              </Typography>
+              <LinearProgress variant="determinate" value={collectionRate} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
         </Box>
 
-        {/* Search and Filters */}
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 2, alignItems: 'center' }}>
-              <TextField
-                placeholder="Search invoices..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: <SearchIcon sx={{ mr: 1, color: theme.palette.text.secondary }} />
-                }}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
+        <Paper sx={{
+          p: 2,
+          mb: 3,
+          bgcolor: mode === 'dark' ? 'rgba(30,41,59,0.8)' : 'background.paper',
+          border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : '1px solid rgba(2,6,23,0.06)',
+          borderRadius: 3,
+        }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto' }, gap: 2, alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              placeholder="Search by invoice number, container, description..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => { if ((e as any).key === 'Enter') { setPage(0); load(); } }}
+              variant="outlined"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 999,
+                  backgroundColor: mode === 'dark' ? 'rgba(15,23,42,0.6)' : 'rgba(2,6,23,0.03)',
+                  boxShadow: 'inset 0 0 0 1px rgba(148,163,184,0.15)',
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main' },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: 'primary.main', borderWidth: 1 },
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchInput ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => { setSearchInput(''); setSearch(''); setPage(0); }}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : undefined,
+              }}
+            />
+            <Stack direction="row" spacing={2}>
               <Button
                 variant="outlined"
                 startIcon={<FilterListIcon />}
                 onClick={() => setShowFilters(!showFilters)}
-                color={hasActiveFilters() ? 'primary' : 'inherit'}
+                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
               >
-                Filters {hasActiveFilters() && <Chip label="Active" size="small" color="primary" sx={{ ml: 1 }} />}
+                Filters
               </Button>
-              <Button variant="outlined" onClick={handleClearFilters} startIcon={<RefreshIcon />}>
-                Clear
-              </Button>
+              <BeautifulRefreshButton onClick={load} variant="outlined" buttonText="Refresh" />
+            </Stack>
+          </Box>
+
+          <Collapse in={showFilters}>
+            <Box sx={{ mt: 2 }}>
+              <Paper sx={{ p: 2, bgcolor: mode === 'dark' ? 'rgba(15,23,42,0.6)' : 'rgba(2,6,23,0.02)', border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : '1px solid rgba(2,6,23,0.06)', borderRadius: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  Advanced Filters
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+                  <FormControl fullWidth>
+                    <InputLabel>Status</InputLabel>
+                    <Select value={status} onChange={(e) => setStatus(e.target.value)} label="Status">
+                      <MenuItem value="">All</MenuItem>
+                      <MenuItem value="unpaid">Unpaid</MenuItem>
+                      <MenuItem value="partially_paid">Partially Paid</MenuItem>
+                      <MenuItem value="paid">Paid</MenuItem>
+                      <MenuItem value="overdue">Overdue</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <DatePicker label="Start Date" value={startDate} onChange={setStartDate} slotProps={{ textField: { fullWidth: true } }} />
+                  <DatePicker label="End Date" value={endDate} onChange={setEndDate} slotProps={{ textField: { fullWidth: true } }} />
+                  <TextField label="Min Amount" type="number" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} fullWidth InputProps={{ startAdornment: <InputAdornment position="start">AED</InputAdornment> }} />
+                  <TextField label="Max Amount" type="number" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} fullWidth InputProps={{ startAdornment: <InputAdornment position="start">AED</InputAdornment> }} />
+                  <DatePicker label="Due Date From" value={dueDateFrom} onChange={setDueDateFrom} slotProps={{ textField: { fullWidth: true } }} />
+                  <DatePicker label="Due Date To" value={dueDateTo} onChange={setDueDateTo} slotProps={{ textField: { fullWidth: true } }} />
+                </Box>
+                <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
+                  <Button variant="outlined" onClick={handleClearFilters} disabled={!hasActiveFilters()} sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}>
+                    Clear All Filters
+                  </Button>
+                  <Button variant="contained" onClick={() => setShowFilters(false)} sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}>
+                    Apply Filters
+                  </Button>
+                </Stack>
+              </Paper>
             </Box>
+          </Collapse>
+        </Paper>
 
-            {showFilters && (
-              <Accordion expanded={showFilters} sx={{ mt: 2 }}>
-                <AccordionDetails>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
-                    <FormControl fullWidth>
-                      <InputLabel>Status</InputLabel>
-                      <Select
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value)}
-                        label="Status"
-                      >
-                        <MenuItem value="">All</MenuItem>
-                        <MenuItem value="unpaid">Unpaid</MenuItem>
-                        <MenuItem value="partially_paid">Partially Paid</MenuItem>
-                        <MenuItem value="paid">Paid</MenuItem>
-                        <MenuItem value="overdue">Overdue</MenuItem>
-                      </Select>
-                    </FormControl>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Showing {invoices.length === 0 ? 0 : page * rowsPerPage + 1} - {Math.min((page + 1) * rowsPerPage, pagination.total)} of {pagination.total} invoices
+          </Typography>
+        </Box>
 
-                    <TextField
-                      label="Agent"
-                      value={agent}
-                      onChange={(e) => setAgent(e.target.value)}
-                      fullWidth
-                    />
-
-                    <DatePicker
-                      label="Start Date"
-                      value={startDate}
-                      onChange={setStartDate}
-                      slotProps={{ textField: { fullWidth: true } }}
-                    />
-
-                    <DatePicker
-                      label="End Date"
-                      value={endDate}
-                      onChange={setEndDate}
-                      slotProps={{ textField: { fullWidth: true } }}
-                    />
-
-                    <TextField
-                      label="Min Amount"
-                      type="number"
-                      value={minAmount}
-                      onChange={(e) => setMinAmount(e.target.value)}
-                      fullWidth
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">AED</InputAdornment>,
-                      }}
-                    />
-
-                    <TextField
-                      label="Max Amount"
-                      type="number"
-                      value={maxAmount}
-                      onChange={(e) => setMaxAmount(e.target.value)}
-                      fullWidth
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">AED</InputAdornment>,
-                      }}
-                    />
-
-                    <DatePicker
-                      label="Due Date From"
-                      value={dueDateFrom}
-                      onChange={setDueDateFrom}
-                      slotProps={{ textField: { fullWidth: true } }}
-                    />
-
-                    <DatePicker
-                      label="Due Date To"
-                      value={dueDateTo}
-                      onChange={setDueDateTo}
-                      slotProps={{ textField: { fullWidth: true } }}
-                    />
-                  </Box>
-                </AccordionDetails>
-              </Accordion>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Invoices Table */}
-        <Card>
-          <CardContent>
-            {loading && <LinearProgress sx={{ mb: 2 }} />}
-            <TableContainer>
-              <Table>
-                <TableHead>
-                                     <TableRow sx={{ backgroundColor: theme.palette.background.paper }}>
+        <Paper>
+          {loading && <LinearProgress />}
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
                     <TableCell sx={{ fontWeight: 'bold' }}>Invoice #</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Agent</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Amount (PKR)</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Container</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Amount (AED)</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Paid (PKR)</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Paid (AED)</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Outstanding (PKR)</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Outstanding (AED)</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Invoice Date</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
@@ -589,15 +511,9 @@ const DubaiTransportInvoices: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {loading ? (
+                  {invoices.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={13} align="center">
-                        <CircularProgress />
-                      </TableCell>
-                    </TableRow>
-                  ) : invoices.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={13} align="center">
+                      <TableCell colSpan={11} align="center">
                         <Typography variant="body1" color="textSecondary">
                           No invoices found
                         </Typography>
@@ -607,14 +523,10 @@ const DubaiTransportInvoices: React.FC = () => {
                     invoices.map((row) => (
                       <TableRow key={row._id} hover>
                         <TableCell sx={{ fontWeight: 'medium' }}>{row.invoice_number}</TableCell>
-                        <TableCell>{row.agent}</TableCell>
-                        <TableCell sx={{ fontWeight: 'medium' }}>{formatCurrencyPKR(row.amount_pkr)}</TableCell>
+                        <TableCell>{row.container_number || '-'}</TableCell>
+                        <TableCell>{row.description || '-'}</TableCell>
                         <TableCell sx={{ fontWeight: 'medium' }}>{formatCurrency(row.amount_aed)}</TableCell>
-                        <TableCell>{formatCurrencyPKR(row.paid_amount_pkr)}</TableCell>
                         <TableCell>{formatCurrency(row.paid_amount_aed)}</TableCell>
-                        <TableCell sx={{ fontWeight: 'medium', color: row.outstanding_amount_pkr > 0 ? 'error.main' : 'inherit' }}>
-                          {formatCurrencyPKR(row.outstanding_amount_pkr)}
-                        </TableCell>
                         <TableCell sx={{ fontWeight: 'medium', color: row.outstanding_amount_aed > 0 ? 'error.main' : 'inherit' }}>
                           {formatCurrency(row.outstanding_amount_aed)}
                         </TableCell>
@@ -640,6 +552,7 @@ const DubaiTransportInvoices: React.FC = () => {
                                   size="small"
                                   onClick={() => {
                                     setSelectedInvoice(row);
+                                    setPaymentError(null);
                                     setPaymentDialogOpen(true);
                                   }}
                                   color="primary"
@@ -691,51 +604,23 @@ const DubaiTransportInvoices: React.FC = () => {
                   )}
                 </TableBody>
               </Table>
-            </TableContainer>
-
-            {/* Page Totals */}
-            {invoices.length > 0 && (
-              <Box sx={{ 
-                mt: 2, 
-                p: 2, 
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'grey.50', 
-                borderRadius: 1,
-                border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'
-              }}>
-                <Typography variant="subtitle2" gutterBottom fontWeight="bold" color="text.primary">
-                  Page Totals:
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
-                  <Typography color="text.primary">
-                    Total Amount: {formatCurrencyPKR(pageTotals.totalAmountPKR)} / {formatCurrency(pageTotals.totalAmountAED)}
-                  </Typography>
-                  <Typography color="text.primary">
-                    Total Paid: {formatCurrencyPKR(pageTotals.totalPaidPKR)} / {formatCurrency(pageTotals.totalPaidAED)}
-                  </Typography>
-                  <Typography color="text.primary">
-                    Total Outstanding: {formatCurrencyPKR(pageTotals.totalOutstandingPKR)} / {formatCurrency(pageTotals.totalOutstandingAED)}
-                  </Typography>
-                </Box>
-              </Box>
-            )}
-
-            {/* Pagination */}
-            {pagination.totalPages > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Pagination
-                  count={pagination.totalPages}
-                  page={pagination.page}
-                  onChange={(_, page) => setPagination(prev => ({ ...prev, page }))}
-                  color="primary"
-                  size="large"
-                />
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+          </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            component="div"
+            count={pagination.total}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+          />
+        </Paper>
 
         {/* Payment Dialog */}
-        <Dialog open={paymentDialogOpen} onClose={() => setPaymentDialogOpen(false)} maxWidth="sm" fullWidth>
+        <Dialog open={paymentDialogOpen} onClose={() => { setPaymentDialogOpen(false); setPaymentError(null); }} maxWidth="sm" fullWidth>
           <DialogTitle>
             <Stack direction="row" alignItems="center" spacing={1}>
               <MoneyIcon color="primary" />
@@ -744,12 +629,37 @@ const DubaiTransportInvoices: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <Stack spacing={2} sx={{ mt: 1 }}>
+              {paymentError && (
+                <Alert severity="error" onClose={() => setPaymentError(null)}>
+                  {paymentError}
+                </Alert>
+              )}
+              {selectedInvoice && (
+                <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+                  <Typography variant="body2" color="textSecondary">
+                    Invoice: <strong>{selectedInvoice.invoice_number}</strong>
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Outstanding: <strong>{formatAED(selectedInvoice.outstanding_amount_aed)}</strong>
+                  </Typography>
+                </Box>
+              )}
               <TextField
                 label="Amount"
                 type="number"
                 value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
+                onChange={(e) => {
+                  setPaymentAmount(e.target.value);
+                  setPaymentError(null);
+                }}
                 required
+                inputProps={{ min: 0.01, step: 0.01, max: selectedInvoice?.outstanding_amount_aed }}
+                error={!!paymentAmount && parseFloat(paymentAmount) > (selectedInvoice?.outstanding_amount_aed || 0)}
+                helperText={
+                  selectedInvoice
+                    ? `Maximum payable amount: ${formatAED(selectedInvoice.outstanding_amount_aed)}`
+                    : undefined
+                }
                 InputProps={{
                   startAdornment: <InputAdornment position="start">AED</InputAdornment>,
                 }}
@@ -800,7 +710,7 @@ const DubaiTransportInvoices: React.FC = () => {
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setPaymentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { setPaymentDialogOpen(false); setPaymentError(null); }}>Cancel</Button>
             <Button onClick={handlePaymentSubmit} variant="contained" startIcon={<PaymentIcon />}>
               Add Payment
             </Button>
@@ -828,12 +738,6 @@ const DubaiTransportInvoices: React.FC = () => {
                 value={reportEndDate}
                 onChange={setReportEndDate}
                 slotProps={{ textField: { fullWidth: true } }}
-              />
-              <TextField
-                label="Agent"
-                value={reportAgent}
-                onChange={(e) => setReportAgent(e.target.value)}
-                fullWidth
               />
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
@@ -891,7 +795,6 @@ const DubaiTransportInvoices: React.FC = () => {
                 onChange={(_, value) => value && setReportGroupBy(value)}
               >
                 <ToggleButton value="none">None</ToggleButton>
-                <ToggleButton value="agent">Agent</ToggleButton>
                 <ToggleButton value="status">Status</ToggleButton>
                 <ToggleButton value="month">Month</ToggleButton>
               </ToggleButtonGroup>

@@ -251,15 +251,12 @@ export type OutstandingData = CustomerOutstanding | ProductOutstanding | Categor
 export interface FreightInvoice {
   _id: string;
   invoice_number: string;
-  amount_pkr: number;
-  conversion_rate: number;
+  description?: string;
+  container_number?: string;
   amount_aed: number;
-  agent: string;
   invoice_date: string;
   due_date: string;
-  paid_amount_pkr: number;
   paid_amount_aed: number;
-  outstanding_amount_pkr: number;
   outstanding_amount_aed: number;
   status: 'unpaid' | 'partially_paid' | 'paid' | 'overdue';
   last_payment_date?: string;
@@ -323,15 +320,12 @@ export interface TransportPayment {
 export interface DubaiTransportInvoice {
   _id: string;
   invoice_number: string;
-  amount_pkr: number;
-  conversion_rate: number;
+  description?: string;
+  container_number?: string;
   amount_aed: number;
-  agent: string;
   invoice_date: string;
   due_date: string;
-  paid_amount_pkr: number;
   paid_amount_aed: number;
-  outstanding_amount_pkr: number;
   outstanding_amount_aed: number;
   status: 'unpaid' | 'partially_paid' | 'paid' | 'overdue';
   last_payment_date?: string;

@@ -865,7 +865,7 @@ const SalesPage: React.FC = () => {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto' }, gap: 2, alignItems: 'center' }}>
           <TextField
             fullWidth
-            placeholder="Search sales, customers, container, product..."
+            placeholder="Search by exact customer name, or partial invoice/container/product..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => { if ((e as any).key === 'Enter') setSearchQuery(searchInput.trim()); }}
@@ -956,7 +956,7 @@ const SalesPage: React.FC = () => {
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2, mb: 3 }}>
               <TextField
                 fullWidth
-                label="Customer"
+                label="Customer (exact name)"
                 value={filters.customer}
                 onChange={(e) => setFilters({ ...filters, customer: e.target.value })}
                 onKeyDown={(e) => {
