@@ -38,7 +38,8 @@ import {
   Ship, 
   FileText,
   Tags,
-  Package
+  Package,
+  MessageCircle
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -60,6 +61,7 @@ const menuItems = [
   { text: 'Products', icon: <Package size={20} />, path: '/products' },
   { text: 'Users', icon: <UserIcon size={20} />, path: '/users' },
   { text: 'Daily Ledger', icon: <BookOpen size={20} />, path: '/daily-ledger' },
+  { text: 'WhatsApp Assistant', icon: <MessageCircle size={20} />, path: '/settings/whatsapp-assistant' },
 ];
 
 const salesItems = [
@@ -374,7 +376,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           },
         }}>
           {/* Main Menu Items */}
-          {menuItems.map((item) => {
+          {menuItems
+            .filter((item) => item.path !== '/settings/whatsapp-assistant' || user?.role === 'admin')
+            .map((item) => {
             const selected = isSelected(item.path);
             return (
               <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>

@@ -45,6 +45,7 @@ import ManualStatement from './pages/ManualStatement';
 import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import WhatsAppAssistantSettings from './pages/WhatsAppAssistantSettings';
 import LoadingSpinner from './components/LoadingSpinner';
 
 
@@ -290,6 +291,16 @@ const AppContent: React.FC = () => {
             <RoleRoute roles={['admin']}>
               <AppLayout>
                 <Settings />
+              </AppLayout>
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/settings/whatsapp-assistant"
+          element={
+            <RoleRoute roles={['admin']}>
+              <AppLayout>
+                <WhatsAppAssistantSettings />
               </AppLayout>
             </RoleRoute>
           }

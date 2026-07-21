@@ -39,6 +39,7 @@ import {
   Email as EmailIcon,
   NotificationsActive as NotificationsActiveIcon
 } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface SettingsState {
@@ -60,6 +61,7 @@ interface SettingsState {
 
 const Settings: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
   // const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -190,13 +192,21 @@ const Settings: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Settings
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Manage your application preferences and system configurations
-        </Typography>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Settings
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Manage your application preferences and system configurations
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          onClick={() => navigate('/settings/whatsapp-assistant')}
+        >
+          WhatsApp Assistant
+        </Button>
       </Box>
 
       {/* Error Alert */}

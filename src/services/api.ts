@@ -37,6 +37,16 @@ export interface CreateUserPayload {
   role?: 'admin' | 'employee';
 }
 
+export interface WhatsAppAuthorizedNumber {
+  _id: string;
+  phoneNumber: string;
+  label: string;
+  isActive: boolean;
+  createdBy?: Pick<User, '_id' | 'name' | 'email'>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 class ApiService {
   private api: AxiosInstance;
 
@@ -159,6 +169,26 @@ class ApiService {
 
   async deleteUser(id: string): Promise<ApiResponse<null>> {
     const response: AxiosResponse = await this.api.delete(`/users/${id}`);
+    return response.data;
+  }
+
+  async getWhatsAppAuthorizedNumbers(): Promise<{ success: boolean; numbers: WhatsAppAuthorizedNumber[] }> {
+    const response: AxiosResponse = await this.api.get('/whatsapp/authorized-numbers');
+    return response.data;
+  }
+
+  async createWhatsAppAuthorizedNumber(data: { phoneNumber: string; label?: string }): Promise<{ success: boolean; message: string; number: WhatsAppAuthorizedNumber }> {
+    const response: AxiosResponse = await this.api.post('/whatsapp/authorized-numbers', data);
+    return response.data;
+  }
+
+  async updateWhatsAppAuthorizedNumber(id: string, data: Partial<Pick<WhatsAppAuthorizedNumber, 'phoneNumber' | 'label' | 'isActive'>>): Promise<{ success: boolean; message: string; number: WhatsAppAuthorizedNumber }> {
+    const response: AxiosResponse = await this.api.put(`/whatsapp/authorized-numbers/${id}`, data);
+    return response.data;
+  }
+
+  async deleteWhatsAppAuthorizedNumber(id: string): Promise<ApiResponse<null>> {
+    const response: AxiosResponse = await this.api.delete(`/whatsapp/authorized-numbers/${id}`);
     return response.data;
   }
 
