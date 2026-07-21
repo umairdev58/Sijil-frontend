@@ -850,9 +850,9 @@ const TransportInvoices: React.FC = () => {
                         <TableCell>{payment.reference || '-'}</TableCell>
                         <TableCell>{payment.notes || '-'}</TableCell>
                         <TableCell>
-                          {typeof payment.receivedBy === 'object' 
+                          {typeof payment.receivedBy === 'object' && payment.receivedBy !== null
                             ? payment.receivedBy.name 
-                            : payment.receivedBy}
+                            : payment.receivedBy || '—'}
                         </TableCell>
                       </TableRow>
                     ))}

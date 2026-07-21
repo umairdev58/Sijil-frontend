@@ -1,10 +1,36 @@
+export type UserRole = 'admin' | 'employee' | 'superadmin';
+
+export type OrganizationStatus = 'active' | 'suspended';
+
+export interface OrganizationSummary {
+  id: string;
+  _id?: string;
+  name: string;
+  legalName?: string;
+  trn?: string;
+  status: OrganizationStatus;
+}
+
+export interface Organization extends Omit<OrganizationSummary, 'id'> {
+  _id: string;
+  id?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  logoUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'admin' | 'employee';
-  department: string;
-  position: string;
+  role: UserRole;
+  organizationId?: string | null;
+  organization?: OrganizationSummary | null;
+  department?: string;
+  position?: string;
   trn?: string;
   isActive: boolean;
   lastLogin?: string;
@@ -162,6 +188,7 @@ export interface LedgerSummary {
 
 export interface AuthState {
   user: User | null;
+  organization: OrganizationSummary | null;
   token: string | null;
   isAuthenticated: boolean;
   loading: boolean;

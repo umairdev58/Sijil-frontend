@@ -1056,9 +1056,9 @@ const SaleDetails: React.FC = () => {
                           </Box>
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" color="text.secondary">
-                              Received by: {typeof payment.receivedBy === 'object'
+                              Received by: {typeof payment.receivedBy === 'object' && payment.receivedBy !== null
                                 ? payment.receivedBy.name
-                                : payment.receivedBy}
+                                : payment.receivedBy || '—'}
                             </Typography>
                             {payment.notes && (
                               <Typography variant="body2" color="text.secondary">

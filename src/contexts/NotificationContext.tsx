@@ -74,7 +74,10 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   // Generate dynamic notifications based on business data
   const generateDynamicNotifications = useCallback(async () => {
-    if (!user) return;
+    if (!user || user.role === 'superadmin') {
+      setNotifications([]);
+      return;
+    }
 
     try {
       setLoading(true);

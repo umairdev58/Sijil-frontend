@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { User, Customer, Supplier, Sales, Payment, LoginCredentials, ChangePasswordData, ApiResponse, PaginatedResponse, SaleApiResponse, Purchase, DailyLedger, LedgerEntry, LedgerSummary, FreightInvoice, TransportInvoice, FreightPayment, TransportPayment, DubaiTransportInvoice, DubaiClearanceInvoice, DubaiTransportPayment, DubaiClearancePayment, CustomerQueryOptions, Category, Product } from '../types';
+import { User, Customer, Supplier, Sales, Payment, LoginCredentials, ChangePasswordData, ApiResponse, PaginatedResponse, SaleApiResponse, Purchase, DailyLedger, LedgerEntry, LedgerSummary, FreightInvoice, TransportInvoice, FreightPayment, TransportPayment, DubaiTransportInvoice, DubaiClearanceInvoice, DubaiTransportPayment, DubaiClearancePayment, CustomerQueryOptions, Category, Product, Organization, OrganizationSummary } from '../types';
 
 // Add interface for sales filter parameters
 export interface SalesFilterParams {
@@ -35,6 +35,48 @@ export interface CreateUserPayload {
   department?: string;
   position?: string;
   role?: 'admin' | 'employee';
+}
+
+export interface CreateOrganizationPayload {
+  name: string;
+  legalName?: string;
+  trn?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  logoUrl?: string;
+  adminName: string;
+  adminEmail: string;
+  adminPassword: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  message?: string;
+  token?: string;
+  user?: User;
+  organization?: OrganizationSummary | null;
+  data?: User | {
+    user?: User;
+    organization?: OrganizationSummary | null;
+  };
+}
+
+export interface OrganizationsResponse {
+  success: boolean;
+  organizations?: Organization[];
+  data?: Organization[];
+  message?: string;
+}
+
+export interface WhatsAppAuthorizedNumber {
+  _id: string;
+  phoneNumber: string;
+  label: string;
+  isActive: boolean;
+  createdBy?: Pick<User, '_id' | 'name' | 'email'>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 class ApiService {
@@ -109,14 +151,14 @@ class ApiService {
   }
 
   // Auth endpoints
-  async login(credentials: LoginCredentials): Promise<{ success: boolean; message?: string; token?: string; user?: User }> {
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
     console.log('API: Making login request to:', `${this.api.defaults.baseURL}/auth/login`);
     const response: AxiosResponse = await this.api.post('/auth/login', credentials);
     console.log('API: Login response:', response.data);
     return response.data;
   }
 
-  async getCurrentUser(): Promise<ApiResponse<User>> {
+  async getCurrentUser(): Promise<AuthResponse> {
     const response: AxiosResponse = await this.api.get('/auth/me');
     return response.data;
   }
@@ -141,6 +183,33 @@ class ApiService {
     return response.data;
   }
 
+  // Platform superadmin endpoints
+  async getOrganizations(): Promise<OrganizationsResponse> {
+    const response: AxiosResponse = await this.api.get('/platform/organizations');
+    return response.data;
+  }
+
+  async createOrganization(data: CreateOrganizationPayload): Promise<ApiResponse<Organization> & { organization?: Organization }> {
+    const response: AxiosResponse = await this.api.post('/platform/organizations', data);
+    return response.data;
+  }
+
+  async updateOrganization(id: string, data: Partial<Organization>): Promise<ApiResponse<Organization> & { organization?: Organization }> {
+    const response: AxiosResponse = await this.api.patch(`/platform/organizations/${id}`, data);
+    return response.data;
+  }
+
+  // Current organization profile endpoints
+  async getMyOrganization(): Promise<ApiResponse<Organization> & { organization?: Organization }> {
+    const response: AxiosResponse = await this.api.get('/organization/me');
+    return response.data;
+  }
+
+  async updateMyOrganization(data: Partial<Organization>): Promise<ApiResponse<Organization> & { organization?: Organization }> {
+    const response: AxiosResponse = await this.api.patch('/organization/me', data);
+    return response.data;
+  }
+
   // User endpoints
   async getUsers(page = 1, limit = 10): Promise<{ success: boolean; users: User[]; pagination: any }> {
     const response: AxiosResponse = await this.api.get(`/users?page=${page}&limit=${limit}`);
@@ -159,6 +228,26 @@ class ApiService {
 
   async deleteUser(id: string): Promise<ApiResponse<null>> {
     const response: AxiosResponse = await this.api.delete(`/users/${id}`);
+    return response.data;
+  }
+
+  async getWhatsAppAuthorizedNumbers(): Promise<{ success: boolean; numbers: WhatsAppAuthorizedNumber[] }> {
+    const response: AxiosResponse = await this.api.get('/whatsapp/authorized-numbers');
+    return response.data;
+  }
+
+  async createWhatsAppAuthorizedNumber(data: { phoneNumber: string; label?: string }): Promise<{ success: boolean; message: string; number: WhatsAppAuthorizedNumber }> {
+    const response: AxiosResponse = await this.api.post('/whatsapp/authorized-numbers', data);
+    return response.data;
+  }
+
+  async updateWhatsAppAuthorizedNumber(id: string, data: Partial<Pick<WhatsAppAuthorizedNumber, 'phoneNumber' | 'label' | 'isActive'>>): Promise<{ success: boolean; message: string; number: WhatsAppAuthorizedNumber }> {
+    const response: AxiosResponse = await this.api.put(`/whatsapp/authorized-numbers/${id}`, data);
+    return response.data;
+  }
+
+  async deleteWhatsAppAuthorizedNumber(id: string): Promise<ApiResponse<null>> {
+    const response: AxiosResponse = await this.api.delete(`/whatsapp/authorized-numbers/${id}`);
     return response.data;
   }
 

@@ -30,17 +30,21 @@ const Login: React.FC = () => {
   const [rememberMe, setRememberMe] = useState<boolean>(() => {
     return localStorage.getItem('remember-email') ? true : false;
   });
-  const { login, loading, error, isAuthenticated, clearError } = useAuth();
+  const { login, loading, error, isAuthenticated, user, clearError } = useAuth();
   const navigate = useNavigate();
   const { mode } = useAppTheme();
 
   useEffect(() => {
     console.log('Login component - isAuthenticated changed:', isAuthenticated);
     if (isAuthenticated) {
-      console.log('Redirecting to dashboard...');
-      navigate('/dashboard');
+      const destination = user?.role === 'superadmin'
+        ? '/platform/organizations'
+        : user?.role === 'employee'
+          ? '/sales/new'
+          : '/dashboard';
+      navigate(destination, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user?.role, navigate]);
 
   useEffect(() => {
     if (error) {
