@@ -42,13 +42,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { sidebarCollapsed, setSidebarCollapsed } = useSidebar();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
-  const { logout } = useAuth();
+  const { logout, user, organization } = useAuth();
   const { mode } = useTheme();
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead, refreshNotifications } = useNotifications();
 
   const currentTitle = useMemo(() => {
     const path = window.location.pathname;
+    if (path === '/platform/organizations') return 'Organizations';
+    if (path === '/organization/settings') return 'Organization Settings';
     if (path === '/customer-outstanding') return 'Customer Outstanding';
     if (path === '/daily-ledger') return 'Daily Ledger';
     if (path === '/executive-dashboard') return 'Executive Dashboard';
@@ -164,7 +166,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             color: mode === 'dark' ? 'rgba(241, 245, 249, 0.7)' : 'text.secondary', 
             letterSpacing: 0.5 
           }}>
-              Manage your business operations
+              {user?.role === 'superadmin' ? 'Manage the Sijil platform' : organization?.name || 'Manage your business operations'}
             </Typography>
           </Box>
 
@@ -174,7 +176,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <ThemeToggle />
 
             {/* Notifications */}
-            <Tooltip title="Notifications" arrow>
+            {user?.role !== 'superadmin' && <Tooltip title="Notifications" arrow>
             <IconButton 
                 onClick={handleNotificationMenuOpen}
               sx={{ 
@@ -190,7 +192,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 <Notifications />
               </Badge>
             </IconButton>
-            </Tooltip>
+            </Tooltip>}
             
             {/* Status Chip */}
             <Chip
@@ -302,10 +304,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <AccountCircle fontSize="small" sx={{ mr: 1 }} />
           Profile
         </MenuItem>
-        <MenuItem onClick={() => navigate('/settings')} sx={{ py: 1.5 }}>
+        {user?.role === 'admin' && <MenuItem onClick={() => navigate('/settings')} sx={{ py: 1.5 }}>
           <Settings fontSize="small" sx={{ mr: 1 }} />
           Settings
-        </MenuItem>
+        </MenuItem>}
         <Divider />
         <MenuItem onClick={handleLogout} sx={{ py: 1.5, color: 'error.main' }}>
           <Logout fontSize="small" sx={{ mr: 1, color: 'error.main' }} />

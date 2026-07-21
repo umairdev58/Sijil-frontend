@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { User, AuthState, LoginCredentials, ChangePasswordData } from '../types';
-import apiService from '../services/api';
+import { User, AuthState, LoginCredentials, ChangePasswordData, OrganizationSummary } from '../types';
+import apiService, { AuthResponse } from '../services/api';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   changePassword: (data: ChangePasswordData) => Promise<void>;
+  refreshAuth: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -13,7 +14,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 type AuthAction =
   | { type: 'AUTH_START' }
-  | { type: 'AUTH_SUCCESS'; payload: { user: User; token: string } }
+  | { type: 'AUTH_SUCCESS'; payload: { user: User; token: string; organization: OrganizationSummary | null } }
   | { type: 'AUTH_FAILURE'; payload: string }
   | { type: 'LOGOUT' }
   | { type: 'CLEAR_ERROR' }
@@ -21,6 +22,7 @@ type AuthAction =
 
 const initialState: AuthState = {
   user: null,
+  organization: null,
   token: localStorage.getItem('token'),
   isAuthenticated: false,
   loading: true,
@@ -39,6 +41,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
       return {
         ...state,
         user: action.payload.user,
+        organization: action.payload.organization,
         token: action.payload.token,
         isAuthenticated: true,
         loading: false,
@@ -48,6 +51,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
       return {
         ...state,
         user: null,
+        organization: null,
         token: null,
         isAuthenticated: false,
         loading: false,
@@ -57,6 +61,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
       return {
         ...state,
         user: null,
+        organization: null,
         token: null,
         isAuthenticated: false,
         loading: false,
@@ -77,6 +82,18 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   }
 };
 
+const unpackAuthResponse = (response: AuthResponse): {
+  user?: User;
+  organization: OrganizationSummary | null;
+} => {
+  const nested = response.data && 'user' in response.data ? response.data : undefined;
+  const user = response.user || nested?.user || (
+    response.data && '_id' in response.data ? response.data : undefined
+  );
+  const organization = response.organization ?? nested?.organization ?? user?.organization ?? null;
+  return { user, organization };
+};
+
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -87,29 +104,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
       
       if (token) {
         try {
           dispatch({ type: 'AUTH_START' });
           const response = await apiService.getCurrentUser();
-          if (response.success && response.data) {
-            dispatch({ type: 'AUTH_SUCCESS', payload: { user: response.data, token } });
-          } else if (storedUser) {
-            // Fallback to stored user if API call fails
-            const user = JSON.parse(storedUser);
-            dispatch({ type: 'AUTH_SUCCESS', payload: { user, token } });
+          const auth = unpackAuthResponse(response);
+          if (response.success && auth.user) {
+            localStorage.setItem('user', JSON.stringify(auth.user));
+            dispatch({ type: 'AUTH_SUCCESS', payload: { user: auth.user, token, organization: auth.organization } });
           } else {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             dispatch({ type: 'AUTH_FAILURE', payload: 'Authentication failed' });
           }
         } catch (error) {
-          // If API call fails, try to restore from localStorage
-          if (storedUser) {
-            const user = JSON.parse(storedUser);
-            dispatch({ type: 'AUTH_SUCCESS', payload: { user, token } });
-          } else {
-            dispatch({ type: 'AUTH_FAILURE', payload: 'Authentication failed' });
-          }
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          dispatch({ type: 'AUTH_FAILURE', payload: 'Authentication failed' });
         }
       } else {
         dispatch({ type: 'AUTH_FAILURE', payload: '' });
@@ -126,12 +138,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('AuthContext: Making API call to login...');
       const response = await apiService.login(credentials);
       console.log('AuthContext: Login API response:', response);
-      if (response.success && response.token && response.user) {
+      const auth = unpackAuthResponse(response);
+      if (response.success && response.token && auth.user) {
         console.log('AuthContext: Login successful, storing token and user...');
         localStorage.setItem('token', response.token);
-        localStorage.setItem('user', JSON.stringify(response.user));
+        localStorage.setItem('user', JSON.stringify(auth.user));
         console.log('AuthContext: Dispatching AUTH_SUCCESS...');
-        dispatch({ type: 'AUTH_SUCCESS', payload: { user: response.user, token: response.token } });
+        dispatch({ type: 'AUTH_SUCCESS', payload: { user: auth.user, token: response.token, organization: auth.organization } });
         console.log('AuthContext: Login process completed successfully');
       } else {
         console.log('AuthContext: Login failed - no success or data');
@@ -175,6 +188,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const refreshAuth = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const response = await apiService.getCurrentUser();
+    const auth = unpackAuthResponse(response);
+    if (response.success && auth.user) {
+      localStorage.setItem('user', JSON.stringify(auth.user));
+      dispatch({ type: 'AUTH_SUCCESS', payload: { user: auth.user, token, organization: auth.organization } });
+    }
+  };
+
   const clearError = () => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
@@ -184,6 +209,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     changePassword,
+    refreshAuth,
     clearError,
   };
 

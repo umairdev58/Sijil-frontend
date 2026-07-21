@@ -45,7 +45,10 @@ import ManualStatement from './pages/ManualStatement';
 import Notifications from './pages/Notifications';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import PlatformOrganizations from './pages/PlatformOrganizations';
+import OrganizationSettings from './pages/OrganizationSettings';
 import LoadingSpinner from './components/LoadingSpinner';
+import { UserRole } from './types';
 
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -59,7 +62,13 @@ const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 };
 
 // Restrict routes by role(s)
-const RoleRoute: React.FC<{ children: React.ReactNode; roles: Array<'admin' | 'employee'> } > = ({ children, roles }) => {
+const homeForRole = (role?: UserRole) => {
+  if (role === 'superadmin') return '/platform/organizations';
+  if (role === 'employee') return '/sales/new';
+  return '/dashboard';
+};
+
+const RoleRoute: React.FC<{ children: React.ReactNode; roles: UserRole[] }> = ({ children, roles }) => {
   const { isAuthenticated, loading, user } = useAuth();
   if (loading) {
     return <LoadingSpinner size="fullscreen" variant="spinner" message="Initializing application..." />;
@@ -69,13 +78,13 @@ const RoleRoute: React.FC<{ children: React.ReactNode; roles: Array<'admin' | 'e
   }
   if (!user || !roles.includes(user.role as any)) {
     // If employee tries to access restricted pages, redirect to allowed entry point
-    return <Navigate to={user?.role === 'employee' ? '/sales/new' : '/dashboard'} />;
+    return <Navigate to={homeForRole(user?.role)} replace />;
   }
   return <>{children}</>;
 };
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { theme } = useTheme();
 
   return (
@@ -83,7 +92,27 @@ const AppContent: React.FC = () => {
       <CssBaseline />
       <Router>
       <Routes>
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to={homeForRole(user?.role)} replace /> : <Login />} />
+        <Route
+          path="/platform/organizations"
+          element={
+            <RoleRoute roles={['superadmin']}>
+              <AppLayout>
+                <PlatformOrganizations />
+              </AppLayout>
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/organization/settings"
+          element={
+            <RoleRoute roles={['admin']}>
+              <AppLayout>
+                <OrganizationSettings />
+              </AppLayout>
+            </RoleRoute>
+          }
+        />
         <Route
           path="/dashboard"
           element={
@@ -490,7 +519,8 @@ const AppContent: React.FC = () => {
             </RoleRoute>
           }
         />
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route path="/" element={<Navigate to={isAuthenticated ? homeForRole(user?.role) : '/login'} replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? homeForRole(user?.role) : '/login'} replace />} />
       </Routes>
     </Router>
     </MuiThemeProvider>

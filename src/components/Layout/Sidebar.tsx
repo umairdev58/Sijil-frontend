@@ -38,7 +38,9 @@ import {
   Ship, 
   FileText,
   Tags,
-  Package
+  Package,
+  Settings as SettingsIcon,
+  ShieldCheck
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -52,14 +54,17 @@ export const collapsedDrawerWidth = 70;
 
 // Menu items configuration
 const menuItems = [
-  { text: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard' },
-  { text: 'Executive Dashboard', icon: <BarChart3 size={20} />, path: '/executive-dashboard' },
-  { text: 'Customers', icon: <Users size={20} />, path: '/customers' },
-  { text: 'Suppliers', icon: <Building2 size={20} />, path: '/suppliers' },
-  { text: 'Categories', icon: <Tags size={20} />, path: '/categories' },
-  { text: 'Products', icon: <Package size={20} />, path: '/products' },
-  { text: 'Users', icon: <UserIcon size={20} />, path: '/users' },
-  { text: 'Daily Ledger', icon: <BookOpen size={20} />, path: '/daily-ledger' },
+  { text: 'Organizations', icon: <ShieldCheck size={20} />, path: '/platform/organizations', roles: ['superadmin'] },
+  { text: 'Dashboard', icon: <LayoutDashboard size={20} />, path: '/dashboard', roles: ['admin'] },
+  { text: 'Executive Dashboard', icon: <BarChart3 size={20} />, path: '/executive-dashboard', roles: ['admin'] },
+  { text: 'Customers', icon: <Users size={20} />, path: '/customers', roles: ['admin'] },
+  { text: 'Suppliers', icon: <Building2 size={20} />, path: '/suppliers', roles: ['admin'] },
+  { text: 'Categories', icon: <Tags size={20} />, path: '/categories', roles: ['admin'] },
+  { text: 'Products', icon: <Package size={20} />, path: '/products', roles: ['admin'] },
+  { text: 'Users', icon: <UserIcon size={20} />, path: '/users', roles: ['admin'] },
+  { text: 'Daily Ledger', icon: <BookOpen size={20} />, path: '/daily-ledger', roles: ['admin'] },
+  { text: 'Organization Settings', icon: <SettingsIcon size={20} />, path: '/organization/settings', roles: ['admin'] },
+  { text: 'New Sale', icon: <Plus size={20} />, path: '/sales/new', roles: ['employee'] },
 ];
 
 const salesItems = [
@@ -374,7 +379,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           },
         }}>
           {/* Main Menu Items */}
-          {menuItems.map((item) => {
+          {menuItems.filter(item => item.roles.includes(user?.role as any)).map((item) => {
             const selected = isSelected(item.path);
             return (
               <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
@@ -440,6 +445,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             );
           })}
 
+          {user?.role === 'admin' && (<>
           {/* Statement Section */}
           {!sidebarCollapsed && (
             <Fade in={!sidebarCollapsed} timeout={300}>
@@ -1956,6 +1962,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               })}
             </List>
           </Collapse>
+          </>)}
 
         </List>
       </Box>
