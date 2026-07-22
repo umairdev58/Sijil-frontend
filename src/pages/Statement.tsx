@@ -311,23 +311,41 @@ const Statement: React.FC = () => {
         </Typography>
         {statementData && !showSearchAndList && (
           <Fade in={!showSearchAndList} timeout={500}>
-            <Button
-              variant="outlined"
-              onClick={() => setShowSearchAndList(true)}
-              startIcon={<SearchIcon />}
-              sx={{ 
-                borderRadius: 999, 
-                textTransform: 'none', 
-                fontWeight: 600,
-                transition: 'all 0.3s ease-in-out',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                  boxShadow: 4,
-                }
-              }}
-            >
-              Show Search & List
-            </Button>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Button
+                variant="outlined"
+                onClick={handlePrint}
+                startIcon={<PrintIcon />}
+                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+              >
+                Print
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleDownload}
+                startIcon={<DownloadIcon />}
+                sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 600 }}
+              >
+                Download PDF
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => setShowSearchAndList(true)}
+                startIcon={<SearchIcon />}
+                sx={{ 
+                  borderRadius: 999, 
+                  textTransform: 'none', 
+                  fontWeight: 600,
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                    boxShadow: 4,
+                  }
+                }}
+              >
+                Show Search & List
+              </Button>
+            </Stack>
           </Fade>
         )}
       </Box>
