@@ -24,6 +24,7 @@ export interface Organization extends Omit<OrganizationSummary, 'id'> {
 
 export interface User {
   _id: string;
+  id?: string;
   name: string;
   email: string;
   role: UserRole;
@@ -36,6 +37,12 @@ export interface User {
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;
+  impersonatedBy?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
 }
 
 export interface Customer {

@@ -46,6 +46,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { mode } = useTheme();
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead, refreshNotifications } = useNotifications();
+  const impersonatedBy = user?.impersonatedBy;
 
   const currentTitle = useMemo(() => {
     const path = window.location.pathname;
@@ -98,13 +99,47 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {impersonatedBy && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1400,
+            bgcolor: '#b45309',
+            color: '#fff',
+            px: 2,
+            py: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            Support session: viewing as {user?.name} ({user?.email}) — started by {impersonatedBy.name}
+          </Typography>
+          <Button
+            size="small"
+            variant="contained"
+            color="inherit"
+            onClick={logout}
+            sx={{ color: '#b45309', fontWeight: 700 }}
+          >
+            End session
+          </Button>
+        </Box>
+      )}
+      <Box sx={{ display: 'flex', flex: 1, pt: impersonatedBy ? '44px' : 0 }}>
       <CssBaseline />
       
       {/* Top App Bar - Modern */}
       <AppBar
         position="fixed"
         sx={{
+          top: impersonatedBy ? '44px' : 0,
           width: { 
             xs: '100%', 
             sm: `calc(100% - ${sidebarCollapsed ? 70 : 280}px)` 
@@ -620,6 +655,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </Box>
         )}
       </Menu>
+    </Box>
     </Box>
   );
 }; 

@@ -12,6 +12,7 @@ import { SidebarProvider } from './contexts/SidebarContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { AppLayout } from './components/Layout/AppLayout';
 import Login from './pages/Login';
+import Impersonate from './pages/Impersonate';
 import Dashboard from './pages/Dashboard';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import Customers from './pages/Customers';
@@ -92,6 +93,7 @@ const AppContent: React.FC = () => {
       <CssBaseline />
       <Router>
       <Routes>
+        <Route path="/impersonate" element={<Impersonate />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to={homeForRole(user?.role)} replace /> : <Login />} />
         <Route
           path="/platform/organizations"
