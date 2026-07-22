@@ -24,6 +24,7 @@ import {
   Tabs,
   Tab,
   Collapse,
+  LinearProgress,
 } from '@mui/material';
 import {
   Assessment as ReportIcon,
@@ -306,69 +307,49 @@ const PurchaseReportPage: React.FC = () => {
       {reportData && !loading && (
         <>
           {/* Summary Cards */}
-          <Box sx={{ display: 'flex', gap: 3, mb: 3, flexWrap: 'wrap' }}>
-            <Card sx={{ 
-              borderRadius: 2, 
-              bgcolor: mode === 'dark' ? 'rgba(59,130,246,0.8)' : '#4299e1', 
-              color: 'white', 
-              minWidth: 200, 
-              flex: 1,
-              boxShadow: mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.08)',
-              border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : 'none',
-            }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3, mb: 3 }}>
+            <Card>
               <CardContent>
-                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                <Typography color="textSecondary" gutterBottom>
+                  Total Purchases
+                </Typography>
+                <Typography variant="h4" component="div">
                   {reportData.summary.totalPurchases}
                 </Typography>
-                <Typography variant="body2">Total Purchases</Typography>
+                <LinearProgress variant="determinate" value={reportData.summary.totalPurchases > 0 ? 100 : 0} sx={{ mt: 1 }} />
               </CardContent>
             </Card>
-            <Card sx={{ 
-              borderRadius: 2, 
-              bgcolor: mode === 'dark' ? 'rgba(34,197,94,0.8)' : '#48bb78', 
-              color: 'white', 
-              minWidth: 200, 
-              flex: 1,
-              boxShadow: mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.08)',
-              border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : 'none',
-            }}>
+            <Card>
               <CardContent>
-                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                <Typography color="textSecondary" gutterBottom>
+                  Total PKR
+                </Typography>
+                <Typography variant="h4" component="div">
                   PKR {reportData.summary.totalPKR.toLocaleString()}
                 </Typography>
-                <Typography variant="body2">Total PKR</Typography>
+                <LinearProgress variant="determinate" value={85} sx={{ mt: 1 }} />
               </CardContent>
             </Card>
-            <Card sx={{ 
-              borderRadius: 2, 
-              bgcolor: mode === 'dark' ? 'rgba(249,115,22,0.8)' : '#ed8936', 
-              color: 'white', 
-              minWidth: 200, 
-              flex: 1,
-              boxShadow: mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.08)',
-              border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : 'none',
-            }}>
+            <Card>
               <CardContent>
-                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                <Typography color="textSecondary" gutterBottom>
+                  Total AED
+                </Typography>
+                <Typography variant="h4" component="div" color="success.main">
                   AED {reportData.summary.totalAED.toLocaleString()}
                 </Typography>
-                <Typography variant="body2">Total AED</Typography>
+                <LinearProgress variant="determinate" value={75} sx={{ mt: 1 }} />
               </CardContent>
             </Card>
-            <Card sx={{ 
-              borderRadius: 2, 
-              bgcolor: mode === 'dark' ? 'rgba(239,68,68,0.8)' : '#f56565', 
-              color: 'white', 
-              minWidth: 200, 
-              flex: 1,
-              boxShadow: mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.08)',
-              border: mode === 'dark' ? '1px solid rgba(148,163,184,0.15)' : 'none',
-            }}>
+            <Card>
               <CardContent>
-                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                <Typography color="textSecondary" gutterBottom>
+                  Average Cost
+                </Typography>
+                <Typography variant="h4" component="div" color="primary">
                   AED {reportData.summary.averageCost.toLocaleString()}
                 </Typography>
-                <Typography variant="body2">Average Cost</Typography>
+                <LinearProgress variant="determinate" value={55} sx={{ mt: 1 }} />
               </CardContent>
             </Card>
           </Box>

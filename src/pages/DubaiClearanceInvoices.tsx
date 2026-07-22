@@ -50,9 +50,6 @@ import {
   Assessment as AssessmentIcon,
   Print as PrintIcon,
   Money as MoneyIcon,
-  TrendingUp as TrendingUpIcon,
-  AccountBalance as AccountBalanceIcon,
-  Receipt as ReceiptIcon,
   Payment as PaymentIcon,
   Refresh as RefreshIcon,
   PictureAsPdf as PdfIcon,
@@ -62,12 +59,14 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO } from 'date-fns';
-import { styled, useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles';
 import apiService from '../services/api';
 import { DubaiClearanceInvoice } from '../types';
+import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 
 const DubaiClearanceInvoices: React.FC = () => {
   const theme = useTheme();
+  const { mode } = useAppTheme();
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState<DubaiClearanceInvoice[]>([]);
   const [loading, setLoading] = useState(false);
@@ -306,10 +305,9 @@ const DubaiClearanceInvoices: React.FC = () => {
     });
   }, [invoices]);
 
-  const Title = styled(Typography)(({ theme }) => ({
-    fontWeight: 800,
-    color: theme.palette.mode === 'dark' ? theme.palette.primary.light : '#1e3a8a',
-  }));
+  const collectionRate = pageTotals.totalAmountAED > 0
+    ? (pageTotals.totalPaidAED / pageTotals.totalAmountAED) * 100
+    : 0;
 
   const hasActiveFilters = () => {
     return search || status || agent || startDate || endDate || 
@@ -318,141 +316,84 @@ const DubaiClearanceInvoices: React.FC = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <Box sx={{ p: 3, backgroundColor: theme.palette.background.default, minHeight: '100vh' }}>
-        {/* Header Section */}
-        <Paper sx={{ 
-          p: 3, 
-          mb: 3, 
-          background: theme.palette.mode === 'dark' 
-            ? 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)' 
-            : 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)', 
-          color: 'white' 
-        }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Title variant="h4" sx={{ color: 'white', mb: 1 }}>
-                Dubai Clearance Invoices
-              </Title>
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                Manage and track Dubai clearance invoice payments
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={2}>
-              <Button
-                variant="outlined"
-                startIcon={<AssessmentIcon />}
-                onClick={() => setReportDialogOpen(true)}
-                sx={{ 
-                  color: 'white', 
-                  borderColor: 'white',
-                  '&:hover': { borderColor: 'white', backgroundColor: 'rgba(255,255,255,0.1)' }
-                }}
-              >
-                Generate Report
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => navigate('/dubai-clearance-invoices/new')}
-                                 sx={{
-                   backgroundColor: theme.palette.background.paper,
-                   color: theme.palette.primary.main,
-                   '&:hover': { backgroundColor: theme.palette.action.hover },
-                 }}
-              >
-                New Invoice
-              </Button>
-            </Stack>
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Dubai Clearance Invoices
+          </Typography>
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="outlined"
+              startIcon={<AssessmentIcon />}
+              onClick={() => setReportDialogOpen(true)}
+              sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 700 }}
+            >
+              Generate Report
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => navigate('/dubai-clearance-invoices/new')}
+              sx={{
+                borderRadius: 999,
+                textTransform: 'none',
+                fontWeight: 700,
+                px: 2.5,
+                bgcolor: mode === 'dark' ? '#8b5cf6' : '#1e3a8a',
+                color: '#ffffff',
+                '&:hover': {
+                  bgcolor: mode === 'dark' ? '#7c3aed' : '#1e40af',
+                },
+              }}
+            >
+              New Invoice
+            </Button>
           </Stack>
-        </Paper>
+        </Box>
 
-        {/* Statistics Cards */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3, mb: 3 }}>
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)'
-              : 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total PKR
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrencyPKR(pageTotals.totalAmountPKR)}
-                  </Typography>
-                </Box>
-                <AccountBalanceIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Total PKR
+              </Typography>
+              <Typography variant="h4" component="div">
+                {formatCurrencyPKR(pageTotals.totalAmountPKR)}
+              </Typography>
+              <LinearProgress variant="determinate" value={pageTotals.totalAmountPKR > 0 ? 100 : 0} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
-          
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #34d399 0%, #10b981 100%)'
-              : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total AED
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(pageTotals.totalAmountAED)}
-                  </Typography>
-                </Box>
-                <TrendingUpIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Total AED
+              </Typography>
+              <Typography variant="h4" component="div">
+                {formatCurrency(pageTotals.totalAmountAED)}
+              </Typography>
+              <LinearProgress variant="determinate" value={85} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
-          
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
-              : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Paid Amount
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(pageTotals.totalPaidAED)}
-                  </Typography>
-                </Box>
-                <PaymentIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Paid Amount
+              </Typography>
+              <Typography variant="h4" component="div" color="success.main">
+                {formatCurrency(pageTotals.totalPaidAED)}
+              </Typography>
+              <LinearProgress variant="determinate" value={Math.min(collectionRate, 100)} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
-          
-          <Card sx={{ 
-            background: theme.palette.mode === 'dark' 
-              ? 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)'
-              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-            color: 'white',
-            height: '100%'
-          }}>
+          <Card>
             <CardContent>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Outstanding
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
-                    {formatCurrency(pageTotals.totalOutstandingAED)}
-                  </Typography>
-                </Box>
-                <ReceiptIcon sx={{ fontSize: 40, opacity: 0.8 }} />
-              </Stack>
+              <Typography color="textSecondary" gutterBottom>
+                Outstanding
+              </Typography>
+              <Typography variant="h4" component="div" color="error">
+                {formatCurrency(pageTotals.totalOutstandingAED)}
+              </Typography>
+              <LinearProgress variant="determinate" value={pageTotals.totalAmountAED > 0 ? Math.min((pageTotals.totalOutstandingAED / pageTotals.totalAmountAED) * 100, 100) : 0} sx={{ mt: 1 }} />
             </CardContent>
           </Card>
         </Box>

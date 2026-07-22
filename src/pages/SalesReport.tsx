@@ -28,6 +28,7 @@ import {
   Tab,
   Collapse,
   Autocomplete,
+  LinearProgress,
 } from '@mui/material';
 import {
   Assessment as ReportIcon,
@@ -490,45 +491,65 @@ const SalesReportPage: React.FC = () => {
       {reportData && (
         <Box sx={{ px: 3 }}>
           {/* Summary Cards */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 3, mb: 3 }}>
-            <Card sx={{ bgcolor: 'success.light', color: 'white' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3, mb: 3 }}>
+            <Card>
               <CardContent>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  {reportData.summary.totalSales}
-                </Typography>
-                <Typography variant="body2">
+                <Typography color="textSecondary" gutterBottom>
                   Total Sales
                 </Typography>
+                <Typography variant="h4" component="div">
+                  {reportData.summary.totalSales}
+                </Typography>
+                <LinearProgress variant="determinate" value={reportData.summary.totalSales > 0 ? 100 : 0} sx={{ mt: 1 }} />
               </CardContent>
             </Card>
-            <Card sx={{ bgcolor: 'primary.main', color: 'white' }}>
+            <Card>
               <CardContent>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  AED {reportData.summary.totalAmount?.toLocaleString()}
-                </Typography>
-                <Typography variant="body2">
+                <Typography color="textSecondary" gutterBottom>
                   Total Amount
                 </Typography>
+                <Typography variant="h4" component="div">
+                  AED {reportData.summary.totalAmount?.toLocaleString()}
+                </Typography>
+                <LinearProgress variant="determinate" value={85} sx={{ mt: 1 }} />
               </CardContent>
             </Card>
-            <Card sx={{ bgcolor: 'warning.main', color: 'white' }}>
+            <Card>
               <CardContent>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  AED {reportData.summary.totalReceived?.toLocaleString()}
-                </Typography>
-                <Typography variant="body2">
+                <Typography color="textSecondary" gutterBottom>
                   Total Received
                 </Typography>
+                <Typography variant="h4" component="div" color="success.main">
+                  AED {reportData.summary.totalReceived?.toLocaleString()}
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={
+                    reportData.summary.totalAmount > 0
+                      ? Math.min((reportData.summary.totalReceived / reportData.summary.totalAmount) * 100, 100)
+                      : 0
+                  }
+                  sx={{ mt: 1 }}
+                />
               </CardContent>
             </Card>
-            <Card sx={{ bgcolor: 'error.main', color: 'white' }}>
+            <Card>
               <CardContent>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  AED {reportData.summary.totalOutstanding?.toLocaleString()}
-                </Typography>
-                <Typography variant="body2">
+                <Typography color="textSecondary" gutterBottom>
                   Total Outstanding
                 </Typography>
+                <Typography variant="h4" component="div" color="error">
+                  AED {reportData.summary.totalOutstanding?.toLocaleString()}
+                </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={
+                    reportData.summary.totalAmount > 0
+                      ? Math.min((reportData.summary.totalOutstanding / reportData.summary.totalAmount) * 100, 100)
+                      : 0
+                  }
+                  sx={{ mt: 1 }}
+                />
               </CardContent>
             </Card>
           </Box>
