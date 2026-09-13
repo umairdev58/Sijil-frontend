@@ -287,10 +287,11 @@ const FreightInvoices: React.FC = () => {
 
   const pageTotals = useMemo(() => {
     const totalAED = rows.reduce((sum, r) => sum + (r.amount_aed || 0), 0);
+    const totalPKR = rows.reduce((sum, r) => sum + (r.amount_pkr || 0), 0);
     const totalPaidAED = rows.reduce((sum, r) => sum + (r.paid_amount_aed || 0), 0);
     const totalOutstandingAED = rows.reduce((sum, r) => sum + (r.outstanding_amount_aed || 0), 0);
     const collectionRate = totalAED > 0 ? (totalPaidAED / totalAED) * 100 : 0;
-    return { totalAED, totalPaidAED, totalOutstandingAED, collectionRate };
+    return { totalAED, totalPKR, totalPaidAED, totalOutstandingAED, collectionRate };
   }, [rows]);
 
   const formatDate = (dateString: string) => {
@@ -383,6 +384,9 @@ const FreightInvoices: React.FC = () => {
               </Typography>
               <Typography variant="h4" component="div">
                 {formatCurrency(pageTotals.totalAED, 'AED')}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+                {formatCurrency(pageTotals.totalPKR, 'PKR')}
               </Typography>
               <LinearProgress variant="determinate" value={85} sx={{ mt: 1 }} />
             </CardContent>
@@ -600,6 +604,8 @@ const FreightInvoices: React.FC = () => {
                   <TableCell sx={{ fontWeight: 'bold' }}>Container</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Description</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>Amount (AED)</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Rate</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>Amount (PKR)</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>Paid (AED)</TableCell>
                   <TableCell align="right" sx={{ fontWeight: 'bold' }}>Outstanding (AED)</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Invoice Date</TableCell>
@@ -622,6 +628,16 @@ const FreightInvoices: React.FC = () => {
                     <TableCell align="right">
                       <Typography variant="body2" fontWeight="bold">
                         {formatCurrency(row.amount_aed, 'AED')}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2">
+                        {row.conversion_rate ?? '-'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography variant="body2" fontWeight="bold">
+                        {formatCurrency(row.amount_pkr || 0, 'PKR')}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
@@ -836,7 +852,7 @@ const FreightInvoices: React.FC = () => {
                   <TableHead>
                     <TableRow sx={{ backgroundColor: 'background.paper' }}>
                       <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 'bold' }}>Amount (PKR)</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Amount (AED)</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Method</TableCell>
                       <TableCell sx={{ fontWeight: 'bold' }}>Reference</TableCell>
@@ -850,7 +866,7 @@ const FreightInvoices: React.FC = () => {
                         <TableCell>{formatDate(payment.paymentDate)}</TableCell>
                         <TableCell>
                           <Typography variant="body2" fontWeight="bold">
-                            {formatCurrency(payment.amount, 'PKR')}
+                            {formatCurrency(payment.amount, 'AED')}
                           </Typography>
                         </TableCell>
                         <TableCell>

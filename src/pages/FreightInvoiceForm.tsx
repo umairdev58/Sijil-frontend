@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -9,6 +9,8 @@ import {
   Snackbar,
   Alert,
   LinearProgress,
+  Card,
+  CardContent,
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -31,6 +33,7 @@ const FreightInvoiceForm: React.FC = () => {
     description: '',
     container_number: '',
     amount_aed: '',
+    conversion_rate: '',
     invoice_date: new Date(),
     due_date: new Date(),
   });
@@ -39,6 +42,12 @@ const FreightInvoiceForm: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const amountPKR = useMemo(() => {
+    const aed = parseFloat(formData.amount_aed) || 0;
+    const rate = parseFloat(formData.conversion_rate) || 0;
+    return rate > 0 ? aed * rate : 0;
+  }, [formData.amount_aed, formData.conversion_rate]);
 
   const loadInvoice = useCallback(async () => {
     try {
@@ -51,6 +60,7 @@ const FreightInvoiceForm: React.FC = () => {
           description: invoice.description || '',
           container_number: invoice.container_number || '',
           amount_aed: invoice.amount_aed.toString(),
+          conversion_rate: invoice.conversion_rate?.toString() || '',
           invoice_date: new Date(invoice.invoice_date),
           due_date: new Date(invoice.due_date),
         });
@@ -71,7 +81,7 @@ const FreightInvoiceForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.invoice_number || !formData.amount_aed) {
+    if (!formData.invoice_number || !formData.amount_aed || !formData.conversion_rate) {
       setError('Please fill in all required fields');
       return;
     }
@@ -83,6 +93,7 @@ const FreightInvoiceForm: React.FC = () => {
         description: formData.description,
         container_number: formData.container_number,
         amount_aed: parseFloat(formData.amount_aed),
+        conversion_rate: parseFloat(formData.conversion_rate),
         invoice_date: formData.invoice_date.toISOString(),
         due_date: formData.due_date.toISOString(),
       };
@@ -107,6 +118,14 @@ const FreightInvoiceForm: React.FC = () => {
     fontWeight: 800,
     color: theme.palette.mode === 'dark' ? theme.palette.primary.light : '#1e3a8a',
   }));
+
+  const formatCurrency = (amount: number, currency: 'PKR' | 'AED') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
 
   if (loading) {
     return (
@@ -160,15 +179,42 @@ const FreightInvoiceForm: React.FC = () => {
                 rows={3}
               />
 
-              <TextField
-                fullWidth
-                label="Amount (AED) *"
-                type="number"
-                value={formData.amount_aed}
-                onChange={(e) => setFormData({ ...formData, amount_aed: e.target.value })}
-                inputProps={{ min: 0, step: 0.01 }}
-                required
-              />
+              <Stack direction="row" spacing={2}>
+                <Box sx={{ flex: 1 }}>
+                  <TextField
+                    fullWidth
+                    label="Amount (AED) *"
+                    type="number"
+                    value={formData.amount_aed}
+                    onChange={(e) => setFormData({ ...formData, amount_aed: e.target.value })}
+                    inputProps={{ min: 0, step: 0.01 }}
+                    required
+                  />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <TextField
+                    fullWidth
+                    label="Conversion Rate (PKR per AED) *"
+                    type="number"
+                    value={formData.conversion_rate}
+                    onChange={(e) => setFormData({ ...formData, conversion_rate: e.target.value })}
+                    inputProps={{ min: 0.01, step: 0.01 }}
+                    required
+                    helperText="e.g., 78 PKR = 1 AED"
+                  />
+                </Box>
+              </Stack>
+
+              <Card sx={{ backgroundColor: 'background.paper' }}>
+                <CardContent>
+                  <Typography variant="h6" color="primary" gutterBottom>
+                    Calculated Amount (PKR)
+                  </Typography>
+                  <Typography variant="h4" fontWeight="bold">
+                    {formatCurrency(amountPKR, 'PKR')}
+                  </Typography>
+                </CardContent>
+              </Card>
 
               <Stack direction="row" spacing={2}>
                 <Box sx={{ flex: 1 }}>

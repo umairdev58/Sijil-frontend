@@ -288,10 +288,14 @@ export interface FreightInvoice {
   description?: string;
   container_number?: string;
   amount_aed: number;
+  conversion_rate: number;
+  amount_pkr: number; // virtual: amount_aed * conversion_rate
   invoice_date: string;
   due_date: string;
   paid_amount_aed: number;
+  paid_amount_pkr: number; // virtual
   outstanding_amount_aed: number;
+  outstanding_amount_pkr: number; // virtual
   status: 'unpaid' | 'partially_paid' | 'paid' | 'overdue';
   last_payment_date?: string;
   createdBy: string | User;

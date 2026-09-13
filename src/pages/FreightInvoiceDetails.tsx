@@ -177,6 +177,13 @@ const FreightInvoiceDetails: React.FC = () => {
     }).format(amount);
   };
 
+  const formatCurrencyPKR = (amount: number) => {
+    return new Intl.NumberFormat('en-PK', {
+      style: 'currency',
+      currency: 'PKR'
+    }).format(amount);
+  };
+
   const formatDate = (date: string | Date) => {
     return format(new Date(date), 'PPP');
   };
@@ -350,6 +357,22 @@ const FreightInvoiceDetails: React.FC = () => {
                   </Box>
                   <Box>
                     <Typography variant="subtitle2" color="textSecondary">
+                      Amount (PKR)
+                    </Typography>
+                    <Typography variant="h5" color="primary" fontWeight="bold">
+                      {formatCurrencyPKR(invoice.amount_pkr || 0)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Conversion Rate
+                    </Typography>
+                    <Typography variant="h6" fontWeight="bold">
+                      {invoice.conversion_rate ? `${invoice.conversion_rate} PKR / AED` : 'N/A'}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" color="textSecondary">
                       Paid Amount (AED)
                     </Typography>
                     <Typography variant="h6" color="success.main" fontWeight="bold">
@@ -362,6 +385,14 @@ const FreightInvoiceDetails: React.FC = () => {
                     </Typography>
                     <Typography variant="h6" color="error.main" fontWeight="bold">
                       {formatCurrency(invoice.outstanding_amount_aed || 0)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Outstanding (PKR)
+                    </Typography>
+                    <Typography variant="h6" color="error.main" fontWeight="bold">
+                      {formatCurrencyPKR(invoice.outstanding_amount_pkr || 0)}
                     </Typography>
                   </Box>
                 </Box>
